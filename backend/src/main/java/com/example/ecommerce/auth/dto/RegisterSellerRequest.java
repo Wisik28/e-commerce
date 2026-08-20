@@ -29,4 +29,6 @@ public class RegisterSellerRequest {
     private String storeName;
 
     private String storeDescription;
+
+    private String recaptchaToken;
 }

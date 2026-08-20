@@ -31,3 +31,12 @@ payment:
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+google:
+  recaptcha:
+    site-key: ${RECAPTCHA_SITE_KEY:6LeIxAcTAAAAABp30egCoDu2i1fg_88Gg5_q9mCH}
+    secret: ${RECAPTCHA_SECRET:${RECAPTCHA_SECRET_KEY:6LeIxAcTAAAAAGG-vFI1TnFTxWGRtBpa3Wgahody}}
+    enabled: ${RECAPTCHA_ENABLED:true}
+
+
+
