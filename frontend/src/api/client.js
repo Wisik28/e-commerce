@@ -10,100 +10,92 @@ const getOrdersForSeller = (sellerId, orders) => {
 export const api = {
   auth: {
     login: async (usernameOrEmail, password) => {
-      await delay(200);
-      const users = getDB('ecom_users');
-      const user = users.find(u => 
-        (u.email === usernameOrEmail || u.username === usernameOrEmail) && 
-        u.password === password
-      );
+      try {
+        const response = await fetch('http://localhost:8081/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: usernameOrEmail, password })
+        });
 
-      if (!user) {
-        throw new Error('Email/username atau password salah.');
-      }
+        const result = await response.json();
 
-      // Check if seller is approved
-      if (user.role === 'seller') {
-        const sellers = getDB('ecom_sellers');
-        const sellerProfile = sellers.find(s => s.id === user.sellerId);
-        if (sellerProfile && sellerProfile.status === 'menunggu') {
-          throw new Error('Akun toko Anda sedang menunggu verifikasi Admin.');
+        if (!response.ok) {
+          throw new Error(result.message || 'Email atau password salah.');
         }
-        if (sellerProfile && sellerProfile.status === 'nonaktif') {
-          throw new Error('Akun toko Anda telah dinonaktifkan oleh Admin.');
-        }
-      }
 
-      // Issue mock token
-      const token = `mock-jwt-token-for-${user.id}-${Date.now()}`;
-      
-      return {
-        success: true,
-        message: 'Login berhasil',
-        data: {
-          token,
-          user: {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            name: user.name,
-            role: user.role,
-            sellerId: user.sellerId || null,
-            avatarInitial: user.avatarInitial
+        const { accessToken, role } = result.data;
+
+        // Simpan token ke localStorage agar sesi tetap ada
+        localStorage.setItem('ecom_token', accessToken);
+
+        return {
+          success: true,
+          message: 'Login berhasil',
+          data: {
+            token: accessToken,
+            user: {
+              // Info user minimal dari response backend
+              // Role diambil dari field role di AuthResponse
+              role: role?.toLowerCase() || 'buyer',
+              email: usernameOrEmail,
+            }
           }
-        }
-      };
+        };
+      } catch (error) {
+        throw new Error(error.message || 'Terjadi kesalahan saat login.');
+      }
     },
 
     register: async ({ email, username, password, name, role, storeName, category }) => {
-      await delay(200);
-      const users = getDB('ecom_users');
-      
-      if (users.some(u => u.email === email || u.username === username)) {
-        throw new Error('Email atau username sudah terdaftar.');
-      }
-
-      const userId = `user-${Date.now()}`;
-      const avatarInitial = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-      
-      let sellerId = null;
-      if (role === 'seller') {
-        sellerId = `seller-${Date.now()}`;
-        const sellers = getDB('ecom_sellers');
-        sellers.push({
-          id: sellerId,
-          ownerId: userId,
+      try {
+        const isSeller = role === 'seller';
+        const url = isSeller 
+          ? 'http://localhost:8081/api/v1/auth/register/seller' 
+          : 'http://localhost:8081/api/v1/auth/register/buyer';
+          
+        const body = isSeller ? {
+          email,
+          password,
+          fullName: name,
+          phone: "0000000000", // Dummy jika frontend tidak punya input nomor telepon
           storeName: storeName || `${name} Store`,
-          ownerName: name,
-          category: category || 'General',
-          productsCount: 0,
-          ordersCount: 0,
-          status: 'menunggu', // waiting admin approval
-          createdAt: new Date().toISOString()
+          storeDescription: category || 'General'
+        } : {
+          email,
+          password,
+          fullName: name,
+          phone: "0000000000"
+        };
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body)
         });
-        saveDB('ecom_sellers', sellers);
+
+        const result = await response.json();
+        
+        if (!response.ok) {
+          // Tangani kemungkinan error array dari Spring Validation
+          if (result.errors && result.errors.length > 0) {
+            throw new Error(result.errors[0].message);
+          }
+          throw new Error(result.message || 'Gagal melakukan registrasi');
+        }
+
+        // Return struktur sesuai mock atau API backend agar komponen tidak rusak
+        return {
+          success: true,
+          message: isSeller 
+            ? 'Registrasi penjual berhasil. Silakan tunggu verifikasi admin.' 
+            : 'Registrasi berhasil. Silakan login.',
+          data: result.data || {}
+        };
+      } catch (error) {
+        throw new Error(error.message || 'Terjadi kesalahan jaringan atau server.');
       }
-
-      const newUser = {
-        id: userId,
-        email,
-        username,
-        password,
-        name,
-        role,
-        sellerId,
-        avatarInitial
-      };
-
-      users.push(newUser);
-      saveDB('ecom_users', users);
-
-      return {
-        success: true,
-        message: role === 'seller' 
-          ? 'Registrasi penjual berhasil. Silakan tunggu verifikasi admin untuk masuk.' 
-          : 'Registrasi berhasil. Silakan login.',
-        data: newUser
-      };
     }
   },
 
