@@ -111,8 +111,8 @@ public class ProductService {
         SellerProfile profile = sellerProfileRepository.findById(sellerId)
                 .orElseThrow(() -> new BusinessRuleException("Seller profile not found"));
 
-        if (profile.getVerificationStatus() != VerificationStatus.APPROVED) {
-            throw new BusinessRuleException("Seller must be APPROVED to manage products");
+        if (profile.getVerificationStatus() == VerificationStatus.REJECTED) {
+            throw new BusinessRuleException("Seller profile has been REJECTED by admin");
         }
     }
 
