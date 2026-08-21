@@ -6,6 +6,9 @@ import com.example.ecommerce.auth.repository.RefreshTokenRepository;
 import com.example.ecommerce.common.exception.BusinessRuleException;
 import com.example.ecommerce.common.exception.DuplicateResourceException;
 import com.example.ecommerce.common.exception.UnauthorizedException;
+import com.example.ecommerce.common.exception.UserNotRegisteredException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.client.RestTemplate;
 import com.example.ecommerce.common.security.JwtService;
 import com.example.ecommerce.seller.entity.SellerProfile;
 import com.example.ecommerce.seller.entity.VerificationStatus;
@@ -41,6 +44,16 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+
+    // inisialisasi nilai client ID 
+    @Value("${google.client-id}")
+    private String googleClientId;
+
+    // inisialisasi nilai client secret
+    @Value("${google.client-secret:}")
+    private String googleClientSecret;
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Transactional
     public AuthResponse registerBuyer(RegisterBuyerRequest request) {
@@ -164,5 +177,101 @@ public class AuthService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 not available", e);
         }
+    }
+
+    // method untuk 
+    private GoogleUserInfoDto verifyGoogleToken(String idToken) {
+        String url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken;
+        try {
+            GoogleUserInfoDto userInfo = restTemplate.getForObject(url, GoogleUserInfoDto.class);
+            if (userInfo == null) {
+                throw new UnauthorizedException("Google token verification returned empty response");
+            }
+            if (googleClientId != null && !googleClientId.trim().isEmpty() && !googleClientId.equals(userInfo.getAud())) {
+                log.error("Google token audience mismatch. Expected: {}, Got: {}", googleClientId, userInfo.getAud());
+                throw new UnauthorizedException("Google token audience mismatch");
+            }
+            if (!"true".equalsIgnoreCase(userInfo.getEmailVerified())) {
+                throw new UnauthorizedException("Google email is not verified");
+            }
+            return userInfo;
+        } catch (Exception e) {
+            log.error("Failed to verify Google token: {}", e.getMessage());
+            throw new UnauthorizedException("Invalid Google token: " + e.getMessage());
+        }
+    }
+
+    @Transactional
+    public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
+        GoogleUserInfoDto userInfo = verifyGoogleToken(request.getIdToken());
+        User user = userRepository.findByEmail(userInfo.getEmail())
+                .orElseThrow(() -> new UserNotRegisteredException(userInfo));
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessRuleException("Account is not active");
+        }
+
+        user.setLastLoginAt(Instant.now());
+        userRepository.save(user);
+
+        return generateAuthResponse(user);
+    }
+
+    @Transactional
+    public AuthResponse registerGoogleBuyer(GoogleRegisterBuyerRequest request) {
+        GoogleUserInfoDto userInfo = verifyGoogleToken(request.getIdToken());
+
+        if (userRepository.existsByEmail(userInfo.getEmail())) {
+            throw new DuplicateResourceException("User", "email", userInfo.getEmail());
+        }
+
+        User user = User.builder()
+                .email(userInfo.getEmail())
+                .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .fullName(userInfo.getName() != null ? userInfo.getName() : "Google User")
+                .phone(request.getPhone())
+                .role(UserRole.BUYER)
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        user = userRepository.save(user);
+        log.info("Google Buyer registered: {}", user.getEmail());
+
+        return generateAuthResponse(user);
+    }
+
+    @Transactional
+    public AuthResponse registerGoogleSeller(GoogleRegisterSellerRequest request) {
+        GoogleUserInfoDto userInfo = verifyGoogleToken(request.getIdToken());
+
+        if (userRepository.existsByEmail(userInfo.getEmail())) {
+            throw new DuplicateResourceException("User", "email", userInfo.getEmail());
+        }
+        if (sellerProfileRepository.existsByStoreName(request.getStoreName())) {
+            throw new DuplicateResourceException("Store", "name", request.getStoreName());
+        }
+
+        User user = User.builder()
+                .email(userInfo.getEmail())
+                .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .fullName(userInfo.getName() != null ? userInfo.getName() : "Google User")
+                .phone(request.getPhone())
+                .role(UserRole.SELLER)
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        user = userRepository.save(user);
+
+        SellerProfile profile = SellerProfile.builder()
+                .user(user)
+                .storeName(request.getStoreName())
+                .storeDescription(request.getStoreDescription())
+                .verificationStatus(VerificationStatus.PENDING)
+                .build();
+
+        sellerProfileRepository.save(profile);
+        log.info("Google Seller registered (PENDING): {}", user.getEmail());
+
+        return generateAuthResponse(user);
     }
 }

@@ -11,7 +11,6 @@ export const AuthProvider = ({ children }) => {
     // Load persisted auth from sessionStorage
     const savedUser = sessionStorage.getItem('ecom_auth_user');
     const savedToken = sessionStorage.getItem('ecom_auth_token');
-    
     if (savedUser && savedToken) {
       setUser(JSON.parse(savedUser));
     }
@@ -24,7 +23,7 @@ export const AuthProvider = ({ children }) => {
       if (response.success) {
         const userData = response.data.user;
         const token = response.data.token;
-        
+
         setUser(userData);
         sessionStorage.setItem('ecom_auth_user', JSON.stringify(userData));
         sessionStorage.setItem('ecom_auth_token', token);

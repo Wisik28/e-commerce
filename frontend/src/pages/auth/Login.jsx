@@ -6,7 +6,7 @@ import { ShoppingBag, ArrowRight } from 'lucide-react';
 export const Login = () => {
   const { login, register } = useAuth();
   const navigate = useNavigate();
-  
+
   const [isLoginView, setIsLoginView] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -72,7 +72,7 @@ export const Login = () => {
         setRegPassword('');
         setRegStoreName('');
         setRegCategory('');
-        
+
         // Wait a second, then switch to login view
         setTimeout(() => {
           setIsLoginView(true);
@@ -144,7 +144,7 @@ export const Login = () => {
           // ================= LOGIN FORM =================
           <form onSubmit={handleLoginSubmit}>
             <div className="form-group">
-              <label>Email atau Username</label>
+              <label>Email</label>
               <input
                 type="text"
                 placeholder="Masukkan email atau username..."
@@ -175,7 +175,7 @@ export const Login = () => {
                 <span className="checkbox-box"></span>
                 <span>Ingat saya</span>
               </label>
-              
+
               <span style={{ color: 'var(--primary)', fontWeight: '600', cursor: 'pointer' }}>
                 Lupa Password?
               </span>

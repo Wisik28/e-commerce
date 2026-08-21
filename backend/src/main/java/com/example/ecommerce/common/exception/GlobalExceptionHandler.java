@@ -33,6 +33,17 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
+//     handler untuk user yang tidak berhasil melakukan register
+    @ExceptionHandler(UserNotRegisteredException.class)
+    public ResponseEntity<ApiResponse<com.example.ecommerce.auth.dto.GoogleUserInfoDto>> handleUserNotRegistered(UserNotRegisteredException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.<com.example.ecommerce.auth.dto.GoogleUserInfoDto>builder()
+                        .success(false)
+                        .message("USER_NOT_REGISTERED")
+                        .data(ex.getUserInfo())
+                        .build());
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
