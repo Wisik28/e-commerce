@@ -25,8 +25,8 @@ export const api = {
 
         const { accessToken, role } = result.data;
 
-        // Simpan token ke localStorage agar sesi tetap ada
-        localStorage.setItem('ecom_token', accessToken);
+        // Simpan token ke sessionStorage agar sesi tetap ada
+        sessionStorage.setItem('ecom_token', accessToken);
 
         return {
           success: true,
@@ -46,7 +46,7 @@ export const api = {
       }
     },
 
-    register: async ({ email, username, password, name, role, storeName, category }) => {
+    register: async ({ email, phoneNumber, password, name, role, storeName, category }) => {
       try {
         const isSeller = role === 'seller';
         const url = isSeller 
@@ -57,14 +57,14 @@ export const api = {
           email,
           password,
           fullName: name,
-          phone: "0000000000", // Dummy jika frontend tidak punya input nomor telepon
+          phone: phoneNumber,
           storeName: storeName || `${name} Store`,
           storeDescription: category || 'General'
         } : {
           email,
           password,
           fullName: name,
-          phone: "0000000000"
+          phone: phoneNumber
         };
 
         const response = await fetch(url, {

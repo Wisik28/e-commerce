@@ -5,7 +5,7 @@ import { initDB } from './api/db'
 import './index.css'
 import App from './App.jsx'
 
-// Initialize localStorage mock DB
+// Initialize sessionStorage mock DB
 initDB();
 
 // Create React Query Client

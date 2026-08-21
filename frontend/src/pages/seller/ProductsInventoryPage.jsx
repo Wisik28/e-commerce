@@ -141,7 +141,6 @@ export const ProductsInventoryPage = () => {
           value={products.length} 
           icon={Package} 
           caption="12 kategori produk" 
-          trend={{ value: '↗ +3,4% vs bulan lalu', type: 'up' }}
         />
         <StatCard 
           label="Stok Hampir Habis" 
@@ -162,7 +161,6 @@ export const ProductsInventoryPage = () => {
           value={formatCurrency(inventoryValue)} 
           icon={Coins} 
           caption="Total nilai modal stok saat ini" 
-          trend={{ value: '↘ -2,1% vs bulan lalu', type: 'down' }}
         />
       </div>
 

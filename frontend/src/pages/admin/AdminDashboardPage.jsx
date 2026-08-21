@@ -41,7 +41,7 @@ export const AdminDashboardPage = () => {
   // Form states for adding seller
   const [sellerName, setSellerName] = useState('');
   const [sellerEmail, setSellerEmail] = useState('');
-  const [sellerUsername, setSellerUsername] = useState('');
+  const [sellerPhoneNumber, setSellerPhoneNumber] = useState('');
   const [sellerPassword, setSellerPassword] = useState('');
   const [storeName, setStoreName] = useState('');
   const [storeCategory, setStoreCategory] = useState('Fashion & Batik');
@@ -62,7 +62,7 @@ export const AdminDashboardPage = () => {
     registerMutation.mutate({
       name: sellerName,
       email: sellerEmail,
-      username: sellerUsername,
+      phoneNumber: sellerPhoneNumber,
       password: sellerPassword,
       role: 'seller',
       storeName,
@@ -70,7 +70,7 @@ export const AdminDashboardPage = () => {
     }, {
       onSuccess: () => {
         // Automatically approve seller added directly by admin for convenience
-        const dbSellers = JSON.parse(localStorage.getItem('ecom_sellers') || '[]');
+        const dbSellers = JSON.parse(sessionStorage.getItem('ecom_sellers') || '[]');
         const addedSeller = dbSellers.find(s => s.storeName === storeName);
         if (addedSeller) {
           approveSellerMutation.mutate(addedSeller.id);
@@ -79,7 +79,7 @@ export const AdminDashboardPage = () => {
         setAddSellerOpen(false);
         setSellerName('');
         setSellerEmail('');
-        setSellerUsername('');
+        setSellerPhoneNumber('');
         setSellerPassword('');
         setStoreName('');
         alert('Penjual baru berhasil ditambahkan dan disetujui!');
@@ -245,28 +245,24 @@ export const AdminDashboardPage = () => {
           value={stats.totalSellers} 
           icon={Store} 
           caption={`${stats.activeSellers} aktif`} 
-          trend={{ value: '↗ 25%', type: 'up' }}
         />
         <StatCard 
           label="Total Pembeli" 
           value={stats.totalBuyers} 
           icon={Users} 
           caption="Total pembeli terdaftar" 
-          trend={{ value: '↗ 18,3%', type: 'up' }}
         />
         <StatCard 
           label="Total Pesanan" 
           value={stats.totalOrders} 
           icon={ShoppingBag} 
           caption="Semua waktu platform" 
-          trend={{ value: '↗ 8.7%', type: 'up' }}
         />
         <StatCard 
           label="Revenue Bulan Ini" 
           value={formatCurrency(stats.monthlyRevenue)} 
           icon={TrendingUp} 
           caption="Agustus 2026" 
-          trend={{ value: '↗ 12,4%', type: 'up' }}
         />
       </div>
 
@@ -278,7 +274,7 @@ export const AdminDashboardPage = () => {
               <h3>Revenue Platform</h3>
               <p>Tren pendapatan 6 bulan terakhir</p>
             </div>
-            <span className="status-pill aktif" style={{ fontWeight: '700' }}>+12,4% MoM</span>
+
           </div>
           <TrendChart data={revenueChartData} labels={revenueChartLabels} height={220} />
         </div>
@@ -355,12 +351,12 @@ export const AdminDashboardPage = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Username</label>
+                    <label>Nomor Handphone</label>
                     <input 
                       type="text" 
-                      placeholder="budiseller"
-                      value={sellerUsername}
-                      onChange={(e) => setSellerUsername(e.target.value)}
+                      placeholder="081234567890"
+                      value={sellerPhoneNumber}
+                      onChange={(e) => setSellerPhoneNumber(e.target.value)}
                       required 
                     />
                   </div>

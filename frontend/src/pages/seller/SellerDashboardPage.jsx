@@ -279,9 +279,9 @@ export const SellerDashboardPage = () => {
       {/* Top 4 Stat Cards */}
       <div className="stats-grid">
         <StatCard label="Total Produk" value={stats.totalProducts} icon={Package} caption="Produk aktif terdaftar" />
-        <StatCard label="Pesanan Masuk" value={stats.totalOrders} icon={ShoppingBag} caption="Total order masuk" trend={{ value: '↗ 9,4%', type: 'up' }} />
+        <StatCard label="Pesanan Masuk" value={stats.totalOrders} icon={ShoppingBag} caption="Total order masuk" />
         <StatCard label="Perlu Konfirmasi" value={stats.pendingConfirmations} icon={CheckCircle} caption="Bukti bayar manual pending" highlight={stats.pendingConfirmations > 0 ? 'amber' : ''} />
-        <StatCard label="Revenue Bulan Ini" value={formatCurrency(stats.monthlyRevenue)} icon={TrendingUp} caption="Agustus 2026" trend={{ value: '↗ 15,2%', type: 'up' }} />
+        <StatCard label="Revenue Bulan Ini" value={formatCurrency(stats.monthlyRevenue)} icon={TrendingUp} caption="Agustus 2026" />
       </div>
 
       {/* Grid: Ringkasan Hari Ini & Chart Mingguan */}

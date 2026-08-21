@@ -20,7 +20,7 @@ export const Login = () => {
   // Register states
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
-  const [regUsername, setRegUsername] = useState('');
+  const [regPhoneNumber, setRegPhoneNumber] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regRole, setRegRole] = useState('buyer'); // 'buyer' or 'seller'
   const [regStoreName, setRegStoreName] = useState('');
@@ -55,7 +55,7 @@ export const Login = () => {
     try {
       const res = await register({
         email: regEmail,
-        username: regUsername,
+        phoneNumber: regPhoneNumber,
         password: regPassword,
         name: regName,
         role: regRole,
@@ -68,7 +68,7 @@ export const Login = () => {
         // Clear form
         setRegName('');
         setRegEmail('');
-        setRegUsername('');
+        setRegPhoneNumber('');
         setRegPassword('');
         setRegStoreName('');
         setRegCategory('');
@@ -76,7 +76,7 @@ export const Login = () => {
         // Wait a second, then switch to login view
         setTimeout(() => {
           setIsLoginView(true);
-          setEmailOrUser(regUsername || regEmail);
+          setEmailOrUser(regEmail);
           setSuccess('');
         }, 2000);
       }
@@ -230,12 +230,12 @@ export const Login = () => {
               </div>
 
               <div className="form-group">
-                <label>Username</label>
+                <label>Nomor Handphone</label>
                 <input
                   type="text"
-                  placeholder="username baru"
-                  value={regUsername}
-                  onChange={(e) => setRegUsername(e.target.value)}
+                  placeholder="081234567890"
+                  value={regPhoneNumber}
+                  onChange={(e) => setRegPhoneNumber(e.target.value)}
                   required
                 />
               </div>

@@ -120,28 +120,24 @@ export const SalesRevenueAnalyticsPage = () => {
           value={formatCurrency(achievedRevenue)} 
           icon={DollarSign} 
           caption="Agustus 2026" 
-          trend={{ value: '↗ +14,3% vs Juli', type: 'up' }}
         />
         <StatCard 
           label="Total Pesanan" 
           value={stats.totalOrders} 
           icon={ShoppingBag} 
           caption="Agustus 2026" 
-          trend={{ value: '↗ +9,7% vs Juli', type: 'up' }}
         />
         <StatCard 
           label="Nilai Rata-rata Pesanan (AOV)" 
           value={formatCurrency(stats.aov)} 
           icon={Award} 
           caption="Per Transaksi" 
-          trend={{ value: '↗ +4,2% vs Juli', type: 'up' }}
         />
         <StatCard 
           label="Tingkat Retur" 
           value={`${stats.returnRate}%`} 
           icon={Activity} 
           caption="14 pesanan dikembalikan" 
-          trend={{ value: '↘ -0,4% vs Juli', type: 'up' }} // Retur turun is green/positive
         />
       </div>
 
