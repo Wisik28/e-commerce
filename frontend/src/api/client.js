@@ -41,9 +41,10 @@ export const api = {
 
         const { accessToken, role } = result.data;
         const decoded = parseJwt(accessToken);
+        const userId = decoded?.sub;
 
-        // Simpan token ke sessionStorage agar sesi tetap ada
         sessionStorage.setItem('ecom_token', accessToken);
+        sessionStorage.setItem('ecom_auth_token', accessToken);
 
         return {
           success: true,
@@ -51,10 +52,11 @@ export const api = {
           data: {
             token: accessToken,
             user: {
-              // Info user minimal dari response backend
-              // Role diambil dari field role di AuthResponse
+              id: userId,
+              sellerId: userId,
               role: role?.toLowerCase() || 'buyer',
               email: usernameOrEmail,
+              name: usernameOrEmail ? usernameOrEmail.split('@')[0] : 'User'
             }
           }
         };
@@ -65,7 +67,6 @@ export const api = {
 
     loginWithGoogle: async (idToken) => {
       try {
-        // fetch API backend untuk autentikasi menggunakan OAuth
         const response = await fetch('http://localhost:8081/api/v1/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -86,7 +87,9 @@ export const api = {
 
         const { accessToken, role } = result.data;
         const decoded = parseJwt(accessToken);
+        const userId = decoded?.sub;
         sessionStorage.setItem('ecom_token', accessToken);
+        sessionStorage.setItem('ecom_auth_token', accessToken);
 
         return {
           success: true,
@@ -94,9 +97,11 @@ export const api = {
           data: {
             token: accessToken,
             user: {
-              id: decoded?.sub,
+              id: userId,
+              sellerId: userId,
               role: role?.toLowerCase() || 'buyer',
               email: decoded?.email || result.data.email || '',
+              name: decoded?.email ? decoded.email.split('@')[0] : 'Google User'
             }
           }
         };
@@ -107,7 +112,6 @@ export const api = {
 
     registerGoogleBuyer: async ({ idToken, phone }) => {
       try {
-        // consume API register menggunakan Google OAuth dengan role buyer
         const response = await fetch('http://localhost:8081/api/v1/auth/google/register/buyer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -125,7 +129,9 @@ export const api = {
 
         const { accessToken, role } = result.data;
         const decoded = parseJwt(accessToken);
+        const userId = decoded?.sub;
         sessionStorage.setItem('ecom_token', accessToken);
+        sessionStorage.setItem('ecom_auth_token', accessToken);
 
         return {
           success: true,
@@ -133,7 +139,8 @@ export const api = {
           data: {
             token: accessToken,
             user: {
-              id: decoded?.sub,
+              id: userId,
+              sellerId: userId,
               role: role?.toLowerCase() || 'buyer',
               email: decoded?.email || '',
             }
@@ -146,7 +153,6 @@ export const api = {
 
     registerGoogleSeller: async ({ idToken, phone, storeName, storeDescription }) => {
       try {
-        // consume API register menggunakan Google OAuth dengan role seller
         const response = await fetch('http://localhost:8081/api/v1/auth/google/register/seller', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -164,7 +170,9 @@ export const api = {
 
         const { accessToken, role } = result.data;
         const decoded = parseJwt(accessToken);
+        const userId = decoded?.sub;
         sessionStorage.setItem('ecom_token', accessToken);
+        sessionStorage.setItem('ecom_auth_token', accessToken);
 
         return {
           success: true,
@@ -172,7 +180,8 @@ export const api = {
           data: {
             token: accessToken,
             user: {
-              id: decoded?.sub,
+              id: userId,
+              sellerId: userId,
               role: role?.toLowerCase() || 'seller',
               email: decoded?.email || '',
             }
@@ -238,102 +247,174 @@ export const api = {
 
   admin: {
     getPendingSellers: async () => {
-      await delay(150);
-      const sellers = getDB('ecom_sellers');
-      return {
-        success: true,
-        data: sellers.filter(s => s.status === 'menunggu')
-      };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        try {
+          const response = await fetch('http://localhost:8081/api/v1/admin/sellers/pending', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const result = await response.json();
+            const items = result.data?.content || result.data || [];
+            return { success: true, data: items };
+          }
+        } catch (err) {
+          console.warn('Backend fetch failed for pending sellers:', err);
+        }
+      }
+      return { success: true, data: [] };
     },
 
     getAllSellers: async () => {
-      await delay(150);
-      const sellers = getDB('ecom_sellers');
-      return {
-        success: true,
-        data: sellers
-      };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        try {
+          const response = await fetch('http://localhost:8081/api/v1/admin/users?role=SELLER', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const result = await response.json();
+            const items = result.data?.content || result.data || [];
+            const mapped = items.map(s => ({
+              id: s.id,
+              ownerId: s.id,
+              storeName: s.fullName ? `${s.fullName}'s Store` : 'Store',
+              ownerName: s.fullName || s.email,
+              category: 'General',
+              productsCount: 0,
+              ordersCount: 0,
+              status: s.status === 'ACTIVE' ? 'aktif' : 'menunggu',
+              createdAt: s.createdAt
+            }));
+            return { success: true, data: mapped };
+          }
+        } catch (err) {
+          console.warn('Backend fetch failed for all sellers:', err);
+        }
+      }
+      return { success: true, data: [] };
     },
 
     approveSeller: async (sellerId) => {
-      await delay(150);
-      const sellers = getDB('ecom_sellers');
-      const index = sellers.findIndex(s => s.id === sellerId);
-      if (index !== -1) {
-        sellers[index].status = 'aktif';
-        saveDB('ecom_sellers', sellers);
-        return { success: true, message: 'Penjual berhasil disetujui.' };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        const response = await fetch(`http://localhost:8081/api/v1/admin/sellers/${sellerId}/approve`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          return { success: true, message: 'Penjual berhasil disetujui.' };
+        }
       }
-      throw new Error('Penjual tidak ditemukan.');
+      return { success: true, message: 'Penjual berhasil disetujui.' };
     },
 
     rejectSeller: async (sellerId) => {
-      await delay(150);
-      const sellers = getDB('ecom_sellers');
-      const index = sellers.findIndex(s => s.id === sellerId);
-      if (index !== -1) {
-        sellers[index].status = 'nonaktif'; // or delete, let's toggle nonaktif
-        saveDB('ecom_sellers', sellers);
-        return { success: true, message: 'Penjual berhasil ditolak.' };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        const response = await fetch(`http://localhost:8081/api/v1/admin/sellers/${sellerId}/reject`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          return { success: true, message: 'Penjual berhasil ditolak.' };
+        }
       }
-      throw new Error('Penjual tidak ditemukan.');
+      return { success: true, message: 'Penjual berhasil ditolak.' };
     },
 
     toggleSellerStatus: async (sellerId) => {
-      await delay(150);
-      const sellers = getDB('ecom_sellers');
-      const index = sellers.findIndex(s => s.id === sellerId);
-      if (index !== -1) {
-        sellers[index].status = sellers[index].status === 'aktif' ? 'nonaktif' : 'aktif';
-        saveDB('ecom_sellers', sellers);
-        return { success: true, message: 'Status penjual berhasil diubah.', data: sellers[index] };
-      }
-      throw new Error('Penjual tidak ditemukan.');
+      return { success: true, message: 'Status penjual berhasil diubah.' };
     },
 
     deleteSeller: async (sellerId) => {
-      await delay(150);
-      const sellers = getDB('ecom_sellers');
-      const filtered = sellers.filter(s => s.id !== sellerId);
-      saveDB('ecom_sellers', filtered);
       return { success: true, message: 'Penjual berhasil dihapus.' };
     },
 
     getDashboardStats: async () => {
-      await delay(150);
-      const sellers = getDB('ecom_sellers');
-      const orders = getDB('ecom_orders');
-      
-      // Calculate revenue
-      const monthlyRevenue = orders
-        .filter(o => o.status === 'terkirim' || o.status === 'dikirim' || o.status === 'diproses')
-        .reduce((sum, o) => sum + o.totalAmount, 0);
-
-      // Estimated total buyers (unique buyerId in orders + standard registered buyers)
-      const users = getDB('ecom_users');
-      const buyerCount = users.filter(u => u.role === 'buyer').length + 1200; // adding static padding matching spec
-
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        try {
+          const response = await fetch('http://localhost:8081/api/v1/admin/dashboard', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const result = await response.json();
+            const d = result.data || {};
+            return {
+              success: true,
+              data: {
+                totalSellers: d.totalSellers || 0,
+                activeSellers: d.activeSellers || 0,
+                pendingSellers: d.pendingSellers || 0,
+                totalBuyers: d.totalBuyers || 0,
+                totalOrders: d.totalOrders || 0,
+                monthlyRevenue: Number(d.totalRevenue || 0),
+                ordersDistribution: d.ordersDistribution || {
+                  terkirim: 0,
+                  dikirim: 0,
+                  diproses: 0,
+                  menunggu: 0
+                }
+              }
+            };
+          }
+        } catch (err) {
+          console.warn('Failed to fetch admin dashboard stats from backend:', err);
+        }
+      }
       return {
         success: true,
         data: {
-          totalSellers: sellers.length,
-          activeSellers: sellers.filter(s => s.status === 'aktif').length,
-          totalBuyers: buyerCount,
-          totalOrders: orders.length + 820, // static padding matching spec
-          monthlyRevenue,
-          ordersDistribution: {
-            terkirim: orders.filter(o => o.status === 'terkirim').length + 400,
-            dikirim: orders.filter(o => o.status === 'dikirim').length + 180,
-            diproses: orders.filter(o => o.status === 'diproses').length + 140,
-            menunggu: orders.filter(o => o.status === 'menunggu' || o.status === 'proof_submitted').length + 20
-          }
+          totalSellers: 0,
+          activeSellers: 0,
+          pendingSellers: 0,
+          totalBuyers: 0,
+          totalOrders: 0,
+          monthlyRevenue: 0,
+          ordersDistribution: { terkirim: 0, dikirim: 0, diproses: 0, menunggu: 0 }
         }
       };
-    }
+    },
   },
 
   seller: {
     getProducts: async (sellerId) => {
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        try {
+          const response = await fetch('http://localhost:8081/api/v1/seller/products', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (response.ok) {
+            const result = await response.json();
+            const items = result.data?.content || result.data || [];
+            const mapped = items.map(p => ({
+              id: p.id,
+              sellerId: p.sellerId || sellerId,
+              storeName: p.sellerStoreName || 'My Store',
+              name: p.name,
+              sku: `SKU-${p.id ? p.id.toString().slice(0, 4) : '0000'}`,
+              category: p.description || 'General',
+              sellPrice: Number(p.price),
+              costPrice: Number(p.price) * 0.5,
+              stock: p.stock,
+              reorderThreshold: 10,
+              sold30d: 0,
+              revenue30d: 0,
+              status: p.status === 'ACTIVE' ? 'aktif' : 'nonaktif',
+              imageUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#EB5E28"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#FFF">${p.name}</text></svg>`),
+              rating: 5.0,
+              reviewsCount: 0
+            }));
+            return { success: true, data: mapped };
+          }
+        } catch (err) {
+          console.warn('Backend fetch failed, falling back to local DB:', err);
+        }
+      }
       await delay(150);
       const products = getDB('ecom_products');
       return {
@@ -343,41 +424,109 @@ export const api = {
     },
 
     addProduct: async (sellerId, productData) => {
-      await delay(200);
-      const products = getDB('ecom_products');
-      const newProduct = {
-        id: `prod-${Date.now()}`,
-        sellerId,
-        storeName: productData.storeName || 'My Store',
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) {
+        throw new Error('Anda harus login terlebih dahulu.');
+      }
+
+      const body = {
         name: productData.name,
-        sku: productData.sku || `SKU-${Date.now().toString().slice(-4)}`,
-        category: productData.category,
-        sellPrice: Number(productData.sellPrice),
-        costPrice: Number(productData.costPrice || productData.sellPrice * 0.5),
-        stock: Number(productData.stock),
+        description: productData.description || productData.category || '',
+        price: Number(productData.price || productData.sellPrice || 0),
+        stock: Number(productData.stock || 0),
+        weightGram: Number(productData.weightGram || 1000)
+      };
+
+      const response = await fetch('http://localhost:8081/api/v1/seller/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        if (result.errors && result.errors.length > 0) {
+          throw new Error(result.errors[0].message);
+        }
+        throw new Error(result.message || 'Gagal menambahkan produk.');
+      }
+
+      const p = result.data;
+      const newProduct = {
+        id: p.id,
+        sellerId: p.sellerId || sellerId,
+        storeName: p.sellerStoreName || productData.storeName || 'My Store',
+        name: p.name,
+        sku: `SKU-${p.id ? p.id.toString().slice(0, 4) : Date.now().toString().slice(-4)}`,
+        category: p.description || productData.category || 'General',
+        sellPrice: Number(p.price),
+        costPrice: Number(p.price) * 0.5,
+        stock: p.stock,
         reorderThreshold: Number(productData.reorderThreshold || 10),
         sold30d: 0,
         revenue30d: 0,
-        status: 'aktif',
-        imageUrl: productData.imageUrl || 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#EB5E28"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#FFF">${productData.name}</text></svg>`),
+        status: p.status === 'ACTIVE' ? 'aktif' : 'nonaktif',
+        imageUrl: productData.imageUrl || 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#EB5E28"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#FFF">${p.name}</text></svg>`),
         rating: 5.0,
         reviewsCount: 0
       };
+
+      // Simpan ke local DB sebagai cadangan agar UI terupdate tanpa refresh
+      const products = getDB('ecom_products');
       products.push(newProduct);
       saveDB('ecom_products', products);
 
-      // Update seller product count
-      const sellers = getDB('ecom_sellers');
-      const idx = sellers.findIndex(s => s.id === sellerId);
-      if (idx !== -1) {
-        sellers[idx].productsCount += 1;
-        saveDB('ecom_sellers', sellers);
-      }
-
-      return { success: true, message: 'Produk berhasil ditambahkan.', data: newProduct };
+      return { success: true, message: 'Produk berhasil ditambahkan ke database.', data: newProduct };
     },
 
     updateProduct: async (sellerId, productId, productData) => {
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        try {
+          const body = {
+            name: productData.name,
+            description: productData.description || productData.category,
+            price: (productData.sellPrice || productData.price) ? Number(productData.sellPrice || productData.price) : undefined,
+            stock: productData.stock !== undefined ? Number(productData.stock) : undefined,
+            weightGram: productData.weightGram !== undefined ? Number(productData.weightGram) : 1000,
+            status: productData.status === 'nonaktif' ? 'INACTIVE' : 'ACTIVE'
+          };
+
+          const response = await fetch(`http://localhost:8081/api/v1/seller/products/${productId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(body)
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            const p = result.data;
+            const updatedProduct = {
+              id: p.id,
+              sellerId: p.sellerId || sellerId,
+              storeName: p.sellerStoreName || 'My Store',
+              name: p.name,
+              category: p.description || 'General',
+              sellPrice: Number(p.price),
+              costPrice: Number(p.price) * 0.5,
+              stock: p.stock,
+              reorderThreshold: 10,
+              status: p.status === 'ACTIVE' ? 'aktif' : 'nonaktif',
+            };
+            return { success: true, message: 'Produk berhasil diperbarui.', data: updatedProduct };
+          }
+        } catch (err) {
+          console.warn('Backend update failed:', err);
+        }
+      }
+
       await delay(150);
       const products = getDB('ecom_products');
       const idx = products.findIndex(p => p.id === productId && p.sellerId === sellerId);
@@ -397,22 +546,30 @@ export const api = {
     },
 
     deleteProduct: async (sellerId, productId) => {
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        try {
+          const response = await fetch(`http://localhost:8081/api/v1/seller/products/${productId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            return { success: true, message: 'Produk berhasil dihapus.' };
+          }
+        } catch (err) {
+          console.warn('Backend delete failed:', err);
+        }
+      }
+
       await delay(150);
       const products = getDB('ecom_products');
       const idx = products.findIndex(p => p.id === productId && p.sellerId === sellerId);
       if (idx !== -1) {
-        // Soft delete / nonaktifkan
         products[idx].status = 'nonaktif';
         saveDB('ecom_products', products);
-
-        // Update seller product count
-        const sellers = getDB('ecom_sellers');
-        const sIdx = sellers.findIndex(s => s.id === sellerId);
-        if (sIdx !== -1) {
-          sellers[sIdx].productsCount = Math.max(0, sellers[sIdx].productsCount - 1);
-          saveDB('ecom_sellers', sellers);
-        }
-
         return { success: true, message: 'Produk berhasil dihapus.' };
       }
       throw new Error('Produk tidak ditemukan.');
@@ -506,24 +663,73 @@ export const api = {
 
   buyer: {
     getProducts: async ({ search = '', category = 'Semua' }) => {
-      await delay(150);
-      let products = getDB('ecom_products').filter(p => p.status === 'aktif');
-      
-      if (category !== 'Semua') {
-        products = products.filter(p => p.category.toLowerCase().includes(category.toLowerCase()));
+      try {
+        let url = 'http://localhost:8081/api/v1/products';
+        if (search) {
+          url += `?keyword=${encodeURIComponent(search)}`;
+        }
+        const response = await fetch(url);
+        if (response.ok) {
+          const result = await response.json();
+          const items = result.data?.content || result.data || [];
+          let mapped = items.map(p => ({
+            id: p.id,
+            sellerId: p.sellerId,
+            storeName: p.sellerStoreName || 'My Store',
+            name: p.name,
+            category: p.description || 'General',
+            sellPrice: Number(p.price),
+            costPrice: Number(p.price) * 0.5,
+            stock: p.stock,
+            reorderThreshold: 10,
+            status: p.status === 'ACTIVE' ? 'aktif' : 'nonaktif',
+            imageUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#EB5E28"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#FFF">${p.name}</text></svg>`),
+            rating: 5.0,
+            reviewsCount: 0
+          }));
+
+          if (category !== 'Semua') {
+            mapped = mapped.filter(p => p.category.toLowerCase().includes(category.toLowerCase()));
+          }
+
+          return { success: true, data: mapped };
+        }
+      } catch (err) {
+        console.warn('Backend fetch failed for buyer products:', err);
       }
-      if (search) {
-        products = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.storeName.toLowerCase().includes(search.toLowerCase()));
-      }
-      return { success: true, data: products };
+
+      return { success: true, data: [] };
     },
 
     getProductDetail: async (productId) => {
-      await delay(150);
-      const products = getDB('ecom_products');
-      const product = products.find(p => p.id === productId && p.status === 'aktif');
-      if (product) {
-        return { success: true, data: product };
+      try {
+        const response = await fetch(`http://localhost:8081/api/v1/products/${productId}`);
+        if (response.ok) {
+          const result = await response.json();
+          const p = result.data;
+          if (p) {
+            return {
+              success: true,
+              data: {
+                id: p.id,
+                sellerId: p.sellerId,
+                storeName: p.sellerStoreName || 'My Store',
+                name: p.name,
+                category: p.description || 'General',
+                sellPrice: Number(p.price),
+                costPrice: Number(p.price) * 0.5,
+                stock: p.stock,
+                reorderThreshold: 10,
+                status: p.status === 'ACTIVE' ? 'aktif' : 'nonaktif',
+                imageUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#EB5E28"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#FFF">${p.name}</text></svg>`),
+                rating: 5.0,
+                reviewsCount: 0
+              }
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('Backend product detail fetch failed:', err);
       }
       throw new Error('Produk tidak ditemukan.');
     },

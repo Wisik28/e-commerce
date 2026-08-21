@@ -122,6 +122,9 @@ export const SellerDashboardPage = () => {
         onSuccess: () => {
           setProductModalOpen(false);
           alert('Produk berhasil diperbarui!');
+        },
+        onError: (err) => {
+          alert('Gagal memperbarui produk: ' + (err.message || 'Terjadi kesalahan'));
         }
       });
     } else {
@@ -129,6 +132,14 @@ export const SellerDashboardPage = () => {
         onSuccess: () => {
           setProductModalOpen(false);
           alert('Produk berhasil ditambahkan!');
+          setProdName('');
+          setProdPrice('');
+          setProdCost('');
+          setProdStock('');
+          setProdThreshold('');
+        },
+        onError: (err) => {
+          alert('Gagal menambahkan produk: ' + (err.message || 'Terjadi kesalahan'));
         }
       });
     }
