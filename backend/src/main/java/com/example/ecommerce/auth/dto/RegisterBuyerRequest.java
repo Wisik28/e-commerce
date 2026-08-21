@@ -22,4 +22,6 @@ public class RegisterBuyerRequest {
 
     @Size(max = 30, message = "Phone must not exceed 30 characters")
     private String phone;
+
+    private String recaptchaToken;
 }
