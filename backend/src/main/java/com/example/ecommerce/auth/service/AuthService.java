@@ -7,6 +7,7 @@ import com.example.ecommerce.common.exception.BusinessRuleException;
 import com.example.ecommerce.common.exception.DuplicateResourceException;
 import com.example.ecommerce.common.exception.UnauthorizedException;
 import com.example.ecommerce.common.exception.UserNotRegisteredException;
+import com.example.ecommerce.common.recaptcha.service.RecaptchaService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.RestTemplate;
 import com.example.ecommerce.common.security.JwtService;
@@ -44,6 +45,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final RecaptchaService recaptchaService;
 
     // inisialisasi nilai client ID 
     @Value("${google.client-id}")
@@ -57,6 +59,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse registerBuyer(RegisterBuyerRequest request) {
+        recaptchaService.validateRecaptcha(request.getRecaptchaToken());
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("User", "email", request.getEmail());
         }
@@ -78,6 +82,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse registerSeller(RegisterSellerRequest request) {
+        recaptchaService.validateRecaptcha(request.getRecaptchaToken());
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("User", "email", request.getEmail());
         }
@@ -111,6 +117,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
+        recaptchaService.validateRecaptcha(request.getRecaptchaToken());
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
