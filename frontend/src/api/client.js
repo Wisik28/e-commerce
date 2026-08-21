@@ -7,6 +7,22 @@ const getOrdersForSeller = (sellerId, orders) => {
   return orders.filter(o => o.sellerId === sellerId);
 };
 
+const parseJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      window.atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+};
+
 export const api = {
   auth: {
     login: async (usernameOrEmail, password) => {
@@ -24,6 +40,7 @@ export const api = {
         }
 
         const { accessToken, role } = result.data;
+        const decoded = parseJwt(accessToken);
 
         // Simpan token ke localStorage agar sesi tetap ada
         localStorage.setItem('ecom_token', accessToken);
@@ -43,6 +60,126 @@ export const api = {
         };
       } catch (error) {
         throw new Error(error.message || 'Terjadi kesalahan saat login.');
+      }
+    },
+
+    loginWithGoogle: async (idToken) => {
+      try {
+        // fetch API backend untuk autentikasi menggunakan OAuth
+        const response = await fetch('http://localhost:8081/api/v1/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          if (response.status === 404 && result.message === 'USER_NOT_REGISTERED') {
+            const err = new Error('USER_NOT_REGISTERED');
+            err.googleUser = result.data;
+            err.idToken = idToken;
+            throw err;
+          }
+          throw new Error(result.message || 'Gagal login menggunakan Google.');
+        }
+
+        const { accessToken, role } = result.data;
+        const decoded = parseJwt(accessToken);
+        localStorage.setItem('ecom_token', accessToken);
+
+        return {
+          success: true,
+          message: 'Login Google berhasil',
+          data: {
+            token: accessToken,
+            user: {
+              id: decoded?.sub,
+              role: role?.toLowerCase() || 'buyer',
+              email: decoded?.email || result.data.email || '',
+            }
+          }
+        };
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    registerGoogleBuyer: async ({ idToken, phone }) => {
+      try {
+        // consume API register menggunakan Google OAuth dengan role buyer
+        const response = await fetch('http://localhost:8081/api/v1/auth/google/register/buyer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken, phone })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          if (result.errors && result.errors.length > 0) {
+            throw new Error(result.errors[0].message);
+          }
+          throw new Error(result.message || 'Registrasi Google gagal');
+        }
+
+        const { accessToken, role } = result.data;
+        const decoded = parseJwt(accessToken);
+        localStorage.setItem('ecom_token', accessToken);
+
+        return {
+          success: true,
+          message: 'Registrasi Google berhasil',
+          data: {
+            token: accessToken,
+            user: {
+              id: decoded?.sub,
+              role: role?.toLowerCase() || 'buyer',
+              email: decoded?.email || '',
+            }
+          }
+        };
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    registerGoogleSeller: async ({ idToken, phone, storeName, storeDescription }) => {
+      try {
+        // consume API register menggunakan Google OAuth dengan role seller
+        const response = await fetch('http://localhost:8081/api/v1/auth/google/register/seller', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken, phone, storeName, storeDescription })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          if (result.errors && result.errors.length > 0) {
+            throw new Error(result.errors[0].message);
+          }
+          throw new Error(result.message || 'Registrasi Google gagal');
+        }
+
+        const { accessToken, role } = result.data;
+        const decoded = parseJwt(accessToken);
+        localStorage.setItem('ecom_token', accessToken);
+
+        return {
+          success: true,
+          message: 'Registrasi Penjual Google berhasil. Silakan tunggu verifikasi admin.',
+          data: {
+            token: accessToken,
+            user: {
+              id: decoded?.sub,
+              role: role?.toLowerCase() || 'seller',
+              email: decoded?.email || '',
+            }
+          }
+        };
+      } catch (error) {
+        throw error;
       }
     },
 
