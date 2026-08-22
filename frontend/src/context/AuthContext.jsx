@@ -29,20 +29,60 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  const _persistUser = (response) => {
+    const userData = response.data.user;
+    const token = response.data.token;
+    setUser(userData);
+    sessionStorage.setItem('ecom_auth_user', JSON.stringify(userData));
+    sessionStorage.setItem('ecom_auth_token', token);
+  };
+
   const login = async (usernameOrEmail, password) => {
     try {
       const response = await api.auth.login(usernameOrEmail, password);
       if (response.success) {
-        const userData = response.data.user;
-        const token = response.data.token;
-
-        setUser(userData);
-        sessionStorage.setItem('ecom_auth_user', JSON.stringify(userData));
-        sessionStorage.setItem('ecom_auth_token', token);
+        _persistUser(response);
       }
       return response;
     } catch (error) {
       throw new Error(error.message || 'Login gagal.');
+    }
+  };
+
+  const loginWithGoogle = async (idToken) => {
+    try {
+      const response = await api.auth.loginWithGoogle(idToken);
+      if (response.success) {
+        _persistUser(response);
+      }
+      return response;
+    } catch (error) {
+      // Re-throw as-is agar komponen bisa menangkap error USER_NOT_REGISTERED
+      throw error;
+    }
+  };
+
+  const registerGoogleBuyer = async ({ idToken, phone }) => {
+    try {
+      const response = await api.auth.registerGoogleBuyer({ idToken, phone });
+      if (response.success) {
+        _persistUser(response);
+      }
+      return response;
+    } catch (error) {
+      throw new Error(error.message || 'Registrasi Google gagal.');
+    }
+  };
+
+  const registerGoogleSeller = async ({ idToken, phone, storeName, storeDescription }) => {
+    try {
+      const response = await api.auth.registerGoogleSeller({ idToken, phone, storeName, storeDescription });
+      if (response.success) {
+        _persistUser(response);
+      }
+      return response;
+    } catch (error) {
+      throw new Error(error.message || 'Registrasi Google Penjual gagal.');
     }
   };
 
@@ -69,6 +109,9 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: !!user,
         loading,
         login,
+        loginWithGoogle,
+        registerGoogleBuyer,
+        registerGoogleSeller,
         register,
         logout,
       }}

@@ -8,6 +8,8 @@ import com.example.ecommerce.seller.entity.SellerProfile;
 import com.example.ecommerce.seller.entity.VerificationStatus;
 import com.example.ecommerce.seller.repository.SellerProfileRepository;
 import com.example.ecommerce.user.entity.User;
+import com.example.ecommerce.user.entity.UserStatus;
+import com.example.ecommerce.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +25,7 @@ public class SellerVerificationService {
 
     private final SellerProfileRepository sellerProfileRepository;
     private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
 
     public Page<SellerProfileResponse> getPendingSellers(Pageable pageable) {
         return sellerProfileRepository
@@ -49,6 +52,12 @@ public class SellerVerificationService {
         profile.setVerifiedBy(adminId);
         profile.setVerifiedAt(Instant.now());
         sellerProfileRepository.save(profile);
+
+        User user = profile.getUser();
+        if (user != null) {
+            user.setStatus(UserStatus.ACTIVE);
+            userRepository.save(user);
+        }
 
         auditLogService.log(adminId, "SELLER_APPROVED", "SELLER_PROFILE", sellerId);
 

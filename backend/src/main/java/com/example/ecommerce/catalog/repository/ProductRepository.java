@@ -24,6 +24,8 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     Page<Product> findBySellerId(UUID sellerId, Pageable pageable);
 
+    long countBySellerId(UUID sellerId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id IN :ids")
     List<Product> findAllByIdWithLock(@Param("ids") List<UUID> ids);

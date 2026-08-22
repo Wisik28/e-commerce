@@ -12,7 +12,6 @@ import BuyerLayout from '../layouts/BuyerLayout';
 import Login from '../pages/auth/Login';
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
 import SellerDashboardPage from '../pages/seller/SellerDashboardPage';
-import SalesRevenueAnalyticsPage from '../pages/seller/SalesRevenueAnalyticsPage';
 import ProductsInventoryPage from '../pages/seller/ProductsInventoryPage';
 import StorefrontPage from '../pages/buyer/StorefrontPage';
 import BuyerOrdersPage from '../pages/buyer/BuyerOrdersPage';
@@ -66,7 +65,6 @@ export const AppRouter = () => {
       <Route element={<RoleGuard allow="seller" />}>
         <Route element={<SellerLayout />}>
           <Route path="/seller/dashboard" element={<SellerDashboardPage />} />
-          <Route path="/seller/sales-revenue" element={<SalesRevenueAnalyticsPage />} />
           <Route path="/seller/products-inventory" element={<ProductsInventoryPage />} />
         </Route>
       </Route>

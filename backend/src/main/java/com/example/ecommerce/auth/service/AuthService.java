@@ -97,7 +97,7 @@ public class AuthService {
                 .fullName(request.getFullName())
                 .phone(request.getPhone())
                 .role(UserRole.SELLER)
-                .status(UserStatus.ACTIVE)
+                .status(UserStatus.INACTIVE)
                 .build();
 
         user = userRepository.save(user);
@@ -265,7 +265,7 @@ public class AuthService {
                 .fullName(userInfo.getName() != null ? userInfo.getName() : "Google User")
                 .phone(request.getPhone())
                 .role(UserRole.SELLER)
-                .status(UserStatus.ACTIVE)
+                .status(UserStatus.INACTIVE)
                 .build();
 
         user = userRepository.save(user);

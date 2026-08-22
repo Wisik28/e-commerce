@@ -46,15 +46,6 @@ export const StorefrontPage = () => {
 
   return (
     <div className="catalog-container">
-      {/* Banner */}
-      <div className="catalog-banner">
-        <div className="banner-content">
-          <span className="banner-tag">Bangga Buatan Indonesia</span>
-          <h2>Karya Nusantara, Kualitas Istimewa</h2>
-          <p>Temukan produk fashion batik, aksesoris kulit lokal, sneakers canvas premium, dan pakaian tenun terbaik langsung dari pengrajin lokal terpercaya.</p>
-        </div>
-      </div>
-
       {/* Categories Horizontal Filter */}
       <div className="filter-chips-container" style={{ marginBottom: '2rem' }}>
         {categories.map(cat => (
