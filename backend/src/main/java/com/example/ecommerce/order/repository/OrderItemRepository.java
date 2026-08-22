@@ -21,4 +21,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
             @Param("sellerId") UUID sellerId, Pageable pageable);
 
     List<OrderItem> findBySellerId(UUID sellerId);
+
+    @Query("SELECT COUNT(DISTINCT oi.order.id) FROM OrderItem oi WHERE oi.seller.id = :sellerId")
+    long countOrdersBySellerId(@Param("sellerId") UUID sellerId);
 }

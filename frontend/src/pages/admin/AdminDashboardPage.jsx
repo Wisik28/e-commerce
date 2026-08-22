@@ -57,6 +57,14 @@ export const AdminDashboardPage = () => {
 
   const handleAddSellerSubmit = (e) => {
     e.preventDefault();
+
+    // Validasi nomor handphone (hanya angka dan persis 12 digit)
+    const phoneRegex = /^[0-9]{12}$/;
+    if (!phoneRegex.test(sellerPhoneNumber)) {
+      alert('Nomor handphone harus persis 12 angka.');
+      return;
+    }
+
     registerMutation.mutate({
       name: sellerName,
       email: sellerEmail,
@@ -354,8 +362,14 @@ export const AdminDashboardPage = () => {
                       type="text" 
                       placeholder="081234567890"
                       value={sellerPhoneNumber}
-                      onChange={(e) => setSellerPhoneNumber(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setSellerPhoneNumber(val.slice(0, 12));
+                      }}
                       required 
+                      maxLength={12}
+                      pattern="[0-9]{12}"
+                      title="Nomor handphone harus 12 angka"
                     />
                   </div>
                 </div>

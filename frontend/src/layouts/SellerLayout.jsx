@@ -2,16 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
-import { useSellerAnalyticsQuery } from '../hooks/useApi';
 import { 
   LayoutDashboard, 
-  Settings, 
+  Package,
   LogOut, 
   RefreshCw, 
-  Calendar,
-  TrendingUp,
-  Package,
-  Bell
+  Calendar
 } from 'lucide-react';
 
 export const SellerLayout = () => {
@@ -20,10 +16,6 @@ export const SellerLayout = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const [timeStr, setTimeStr] = useState('');
-
-  // Fetch analytics to show real-time sidebar badges
-  const { data: analyticsRes } = useSellerAnalyticsQuery(user?.sellerId);
-  const stats = analyticsRes?.data || {};
 
   useEffect(() => {
     const updateTime = () => {
@@ -47,38 +39,22 @@ export const SellerLayout = () => {
   };
 
   const getPageDetails = () => {
-    const storeName = stats?.storeName || user?.name || 'Toko Anda';
     switch (location.pathname) {
       case '/seller/dashboard':
-        return {
-          title: 'Dashboard Penjual',
-          subtitle: `${storeName} — Kelola produk & pesanan Anda`
-        };
-      case '/seller/sales-revenue':
-        return {
-          title: 'Sales & Revenue Analytics',
-          subtitle: 'Analisis mendalam tren penjualan dan pendapatan toko'
-        };
+        return { title: 'Dashboard', subtitle: 'Ringkasan performa toko Anda' };
       case '/seller/products-inventory':
-        return {
-          title: 'Produk & Inventaris',
-          subtitle: 'Kelola stok, pantau performa produk, dan reorder tepat waktu'
-        };
+        return { title: 'Produk', subtitle: 'Kelola produk dan stok toko Anda' };
       default:
-        return {
-          title: 'Seller Panel',
-          subtitle: 'Dashboard Toko Nusantara'
-        };
+        return { title: 'Seller Panel', subtitle: 'Dashboard Toko' };
     }
   };
 
   const dateStr = new Date().toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
+    day: 'numeric', month: 'short', year: 'numeric'
   });
 
   const details = getPageDetails();
+  const initials = (user?.name || 'SE').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <div className="app-wrapper">
@@ -91,10 +67,10 @@ export const SellerLayout = () => {
 
         <nav className="sidebar-nav">
           <div>
-            <div className="nav-group-label">Menu Utama</div>
+            <div className="nav-group-label">Menu</div>
             <div className="nav-links">
-              <Link 
-                to="/seller/dashboard" 
+              <Link
+                to="/seller/dashboard"
                 className={`nav-link-item ${location.pathname === '/seller/dashboard' ? 'active' : ''}`}
               >
                 <span className="nav-link-item-left">
@@ -102,50 +78,16 @@ export const SellerLayout = () => {
                   <span>Dashboard</span>
                 </span>
               </Link>
-              
-              <Link 
-                to="/seller/sales-revenue" 
-                className={`nav-link-item ${location.pathname === '/seller/sales-revenue' ? 'active' : ''}`}
-              >
-                <span className="nav-link-item-left">
-                  <TrendingUp size={18} />
-                  <span>Sales & Analytics</span>
-                </span>
-              </Link>
 
-              <Link 
-                to="/seller/products-inventory" 
+              <Link
+                to="/seller/products-inventory"
                 className={`nav-link-item ${location.pathname === '/seller/products-inventory' ? 'active' : ''}`}
               >
                 <span className="nav-link-item-left">
                   <Package size={18} />
-                  <span>Produk & Stok</span>
+                  <span>Produk</span>
                 </span>
-                {stats.lowStockCount > 0 && (
-                  <span className="nav-badge danger">{stats.lowStockCount}</span>
-                )}
               </Link>
-            </div>
-          </div>
-
-          <div style={{ marginTop: 'auto' }}>
-            <div className="nav-group-label">Preferensi</div>
-            <div className="nav-links">
-              <div className="nav-link-item">
-                <span className="nav-link-item-left">
-                  <Bell size={18} />
-                  <span>Notifikasi</span>
-                </span>
-                {stats.pendingConfirmations > 0 && (
-                  <span className="nav-badge">{stats.pendingConfirmations}</span>
-                )}
-              </div>
-              <div className="nav-link-item">
-                <span className="nav-link-item-left">
-                  <Settings size={18} />
-                  <span>Pengaturan</span>
-                </span>
-              </div>
             </div>
           </div>
         </nav>
@@ -153,7 +95,7 @@ export const SellerLayout = () => {
         <div className="sidebar-footer">
           <div className="user-footer-card">
             <div className="user-footer-info">
-              <div className="user-avatar">{user?.avatarInitial || 'SE'}</div>
+              <div className="user-avatar">{initials}</div>
               <div className="user-meta">
                 <div className="user-name">{user?.name || 'Pemilik Toko'}</div>
                 <span className="user-role">Pemilik Toko</span>
@@ -168,7 +110,6 @@ export const SellerLayout = () => {
 
       {/* Main Content Area */}
       <div className="shell-container">
-        {/* Top Header */}
         <header className="top-header">
           <div className="header-title-section">
             <h1>{details.title}</h1>
@@ -192,7 +133,6 @@ export const SellerLayout = () => {
           </div>
         </header>
 
-        {/* Dynamic page content */}
         <main className="main-content">
           <Outlet />
         </main>

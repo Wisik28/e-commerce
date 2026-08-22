@@ -27,7 +27,7 @@ export const api = {
   auth: {
     login: async (usernameOrEmail, password) => {
       try {
-        const response = await fetch('http://localhost:8081/api/v1/auth/login', {
+        const response = await fetch('http://localhost:8080/api/v1/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: usernameOrEmail, password })
@@ -66,7 +66,7 @@ export const api = {
 
     loginWithGoogle: async (idToken) => {
       try {
-        const response = await fetch('http://localhost:8081/api/v1/auth/google', {
+        const response = await fetch('http://localhost:8080/api/v1/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken })
@@ -110,7 +110,7 @@ export const api = {
 
     registerGoogleBuyer: async ({ idToken, phone }) => {
       try {
-        const response = await fetch('http://localhost:8081/api/v1/auth/google/register/buyer', {
+        const response = await fetch('http://localhost:8080/api/v1/auth/google/register/buyer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken, phone })
@@ -150,7 +150,7 @@ export const api = {
 
     registerGoogleSeller: async ({ idToken, phone, storeName, storeDescription }) => {
       try {
-        const response = await fetch('http://localhost:8081/api/v1/auth/google/register/seller', {
+        const response = await fetch('http://localhost:8080/api/v1/auth/google/register/seller', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken, phone, storeName, storeDescription })
@@ -192,8 +192,8 @@ export const api = {
       try {
         const isSeller = role === 'seller';
         const url = isSeller 
-          ? 'http://localhost:8081/api/v1/auth/register/seller' 
-          : 'http://localhost:8081/api/v1/auth/register/buyer';
+          ? 'http://localhost:8080/api/v1/auth/register/seller' 
+          : 'http://localhost:8080/api/v1/auth/register/buyer';
           
         const body = isSeller ? {
           email,
@@ -246,7 +246,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch('http://localhost:8081/api/v1/admin/sellers/pending', {
+          const response = await fetch('http://localhost:8080/api/v1/admin/sellers/pending', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
@@ -265,7 +265,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch('http://localhost:8081/api/v1/admin/users?role=SELLER', {
+          const response = await fetch('http://localhost:8080/api/v1/admin/users?role=SELLER', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
@@ -274,12 +274,14 @@ export const api = {
             const mapped = items.map(s => ({
               id: s.id,
               ownerId: s.id,
-              storeName: s.fullName ? `${s.fullName}'s Store` : 'Store',
+              storeName: s.storeName || (s.fullName ? `${s.fullName}'s Store` : 'Store'),
               ownerName: s.fullName || s.email,
-              category: 'General',
-              productsCount: 0,
-              ordersCount: 0,
-              status: s.status === 'ACTIVE' ? 'aktif' : 'menunggu',
+              category: s.category || 'General',
+              productsCount: s.productsCount || 0,
+              ordersCount: s.ordersCount || 0,
+              status: s.verificationStatus === 'PENDING' 
+                ? 'menunggu' 
+                : (s.status === 'ACTIVE' ? 'aktif' : 'nonaktif'),
               createdAt: s.createdAt
             }));
             return { success: true, data: mapped };
@@ -294,7 +296,7 @@ export const api = {
     approveSeller: async (sellerId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
-        const response = await fetch(`http://localhost:8081/api/v1/admin/sellers/${sellerId}/approve`, {
+        const response = await fetch(`http://localhost:8080/api/v1/admin/sellers/${sellerId}/approve`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -310,7 +312,7 @@ export const api = {
     rejectSeller: async (sellerId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
-        const response = await fetch(`http://localhost:8081/api/v1/admin/sellers/${sellerId}/reject`, {
+        const response = await fetch(`http://localhost:8080/api/v1/admin/sellers/${sellerId}/reject`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -359,7 +361,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch('http://localhost:8081/api/v1/admin/dashboard', {
+          const response = await fetch('http://localhost:8080/api/v1/admin/dashboard', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
@@ -407,7 +409,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch('http://localhost:8081/api/v1/seller/products', {
+          const response = await fetch('http://localhost:8080/api/v1/seller/products', {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -461,7 +463,7 @@ export const api = {
         weightGram: Number(productData.weightGram || 1000)
       };
 
-      const response = await fetch('http://localhost:8081/api/v1/seller/products', {
+      const response = await fetch('http://localhost:8080/api/v1/seller/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -520,7 +522,7 @@ export const api = {
             status: productData.status === 'nonaktif' ? 'INACTIVE' : 'ACTIVE'
           };
 
-          const response = await fetch(`http://localhost:8081/api/v1/seller/products/${productId}`, {
+          const response = await fetch(`http://localhost:8080/api/v1/seller/products/${productId}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -573,7 +575,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch(`http://localhost:8081/api/v1/seller/products/${productId}`, {
+          const response = await fetch(`http://localhost:8080/api/v1/seller/products/${productId}`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${token}`
@@ -770,7 +772,7 @@ export const api = {
   buyer: {
     getProducts: async ({ search = '', category = 'Semua' }) => {
       try {
-        let url = 'http://localhost:8081/api/v1/products';
+        let url = 'http://localhost:8080/api/v1/products';
         if (search) {
           url += `?keyword=${encodeURIComponent(search)}`;
         }
@@ -809,7 +811,7 @@ export const api = {
 
     getProductDetail: async (productId) => {
       try {
-        const response = await fetch(`http://localhost:8081/api/v1/products/${productId}`);
+        const response = await fetch(`http://localhost:8080/api/v1/products/${productId}`);
         if (response.ok) {
           const result = await response.json();
           const p = result.data;
