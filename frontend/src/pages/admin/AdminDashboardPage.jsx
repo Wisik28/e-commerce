@@ -11,13 +11,11 @@ import {
 import { StatCard } from '../../components/shared/StatCard';
 import { TrendChart, DonutChart } from '../../components/shared/Charts';
 import { DataTable } from '../../components/shared/DataTable';
-import { 
+import {
   Store, 
   Users, 
   ShoppingBag, 
   TrendingUp, 
-  Check, 
-  X, 
   Trash2, 
   UserCheck, 
   UserMinus,

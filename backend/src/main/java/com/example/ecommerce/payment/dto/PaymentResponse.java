@@ -25,4 +25,5 @@ public class PaymentResponse {
     private Instant expiresAt;
     private Instant paidAt;
     private Instant createdAt;
+    private String paymentProofUrl;
 }

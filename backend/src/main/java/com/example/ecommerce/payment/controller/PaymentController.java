@@ -38,4 +38,13 @@ public class PaymentController {
         PaymentResponse response = paymentService.getPayment(orderId, principal.getId());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
+    @PostMapping("/payment-proof")
+    public ResponseEntity<ApiResponse<Void>> uploadPaymentProof(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID orderId,
+            @RequestBody java.util.Map<String, String> body) {
+        paymentService.uploadPaymentProof(principal.getId(), orderId, body.get("proofDataUrl"));
+        return ResponseEntity.ok(ApiResponse.success("Payment proof uploaded successfully"));
+    }
 }

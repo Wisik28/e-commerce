@@ -1,14 +1,3 @@
-// Helper to generate dynamic SVG patterns for product placeholders
-const createSvgPlaceholder = (title, bgColor = '#EB5E28', textColor = '#FFFFFF') => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
-    <rect width="300" height="300" fill="${bgColor}"/>
-    <circle cx="150" cy="120" r="50" fill="${textColor}" fill-opacity="0.15"/>
-    <path d="M 50,220 L 250,220 M 100,200 L 200,200" stroke="${textColor}" stroke-width="6" stroke-linecap="round" opacity="0.3"/>
-    <text x="50%" y="80%" dominant-baseline="middle" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-weight="bold" font-size="20" fill="${textColor}">${title}</text>
-  </svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-};
-
 const INITIAL_SELLERS = [];
 const INITIAL_PRODUCTS = [];
 const INITIAL_USERS = [];

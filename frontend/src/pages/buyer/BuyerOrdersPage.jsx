@@ -6,7 +6,7 @@ import {
   useBuyerUploadPaymentProofMutation,
   useChatCreateConversationMutation
 } from '../../hooks/useApi';
-import { ClipboardList, AlertCircle, Upload, CheckCircle2, MessageSquare, ArrowRight, X } from 'lucide-react';
+import { ClipboardList, Upload, MessageSquare, X } from 'lucide-react';
 
 export const BuyerOrdersPage = () => {
   const { user } = useAuth();

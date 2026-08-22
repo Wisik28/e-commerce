@@ -26,8 +26,7 @@ import {
   Edit2,
   Trash2,
   Check,
-  Eye,
-  FileText
+  Eye
 } from 'lucide-react';
 
 export const SellerDashboardPage = () => {

@@ -43,7 +43,6 @@ export const api = {
         const decoded = parseJwt(accessToken);
         const userId = decoded?.sub;
 
-        sessionStorage.setItem('ecom_token', accessToken);
         sessionStorage.setItem('ecom_auth_token', accessToken);
 
         return {
@@ -88,7 +87,6 @@ export const api = {
         const { accessToken, role } = result.data;
         const decoded = parseJwt(accessToken);
         const userId = decoded?.sub;
-        sessionStorage.setItem('ecom_token', accessToken);
         sessionStorage.setItem('ecom_auth_token', accessToken);
 
         return {
@@ -130,7 +128,6 @@ export const api = {
         const { accessToken, role } = result.data;
         const decoded = parseJwt(accessToken);
         const userId = decoded?.sub;
-        sessionStorage.setItem('ecom_token', accessToken);
         sessionStorage.setItem('ecom_auth_token', accessToken);
 
         return {
@@ -171,7 +168,6 @@ export const api = {
         const { accessToken, role } = result.data;
         const decoded = parseJwt(accessToken);
         const userId = decoded?.sub;
-        sessionStorage.setItem('ecom_token', accessToken);
         sessionStorage.setItem('ecom_auth_token', accessToken);
 
         return {
@@ -302,11 +298,13 @@ export const api = {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (response.ok) {
-          return { success: true, message: 'Penjual berhasil disetujui.' };
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || 'Gagal menyetujui penjual.');
         }
+        return { success: true, message: 'Penjual berhasil disetujui.' };
       }
-      return { success: true, message: 'Penjual berhasil disetujui.' };
+      throw new Error('Anda harus login terlebih dahulu.');
     },
 
     rejectSeller: async (sellerId) => {
@@ -316,19 +314,45 @@ export const api = {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (response.ok) {
-          return { success: true, message: 'Penjual berhasil ditolak.' };
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || 'Gagal menolak penjual.');
         }
+        return { success: true, message: 'Penjual berhasil ditolak.' };
       }
-      return { success: true, message: 'Penjual berhasil ditolak.' };
+      throw new Error('Anda harus login terlebih dahulu.');
     },
 
     toggleSellerStatus: async (sellerId) => {
-      return { success: true, message: 'Status penjual berhasil diubah.' };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        const response = await fetch(`http://localhost:8081/api/v1/admin/users/${sellerId}/toggle-status`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || 'Gagal mengubah status penjual.');
+        }
+        return { success: true, message: 'Status penjual berhasil diubah.' };
+      }
+      throw new Error('Anda harus login terlebih dahulu.');
     },
 
     deleteSeller: async (sellerId) => {
-      return { success: true, message: 'Penjual berhasil dihapus.' };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        const response = await fetch(`http://localhost:8081/api/v1/admin/users/${sellerId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || 'Gagal menghapus penjual.');
+        }
+        return { success: true, message: 'Penjual berhasil dihapus.' };
+      }
+      throw new Error('Anda harus login terlebih dahulu.');
     },
 
     getDashboardStats: async () => {
@@ -576,60 +600,142 @@ export const api = {
     },
 
     getOrders: async (sellerId) => {
-      await delay(150);
-      const orders = getDB('ecom_orders');
-      return {
-        success: true,
-        data: getOrdersForSeller(sellerId, orders)
-      };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        try {
+          const response = await fetch('http://localhost:8081/api/v1/seller/orders', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const result = await response.json();
+            const items = result.data?.content || result.data || [];
+            
+            const mapped = await Promise.all(items.map(async (o) => {
+              let orderStatus = 'menunggu';
+              let proofUrl = null;
+              if (o.status === 'PAID' || o.status === 'PROCESSING') {
+                orderStatus = 'diproses';
+              } else if (o.status === 'SHIPPED') {
+                orderStatus = 'dikirim';
+              } else if (o.status === 'COMPLETED') {
+                orderStatus = 'terkirim';
+              } else if (o.status === 'CANCELLED') {
+                orderStatus = 'cancelled';
+              } else if (o.status === 'PENDING_PAYMENT') {
+                try {
+                  const payRes = await fetch(`http://localhost:8081/api/v1/orders/${o.id}/payment`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  if (payRes.ok) {
+                    const payData = await payRes.json();
+                    if (payData.data?.status === 'PROOF_SUBMITTED') {
+                      orderStatus = 'proof_submitted';
+                      proofUrl = payData.data.paymentProofUrl;
+                    }
+                  }
+                } catch (e) {
+                  console.warn('Failed to fetch payment details for order:', o.id, e);
+                }
+              }
+
+              return {
+                id: o.id,
+                buyerId: o.buyerId,
+                buyerName: o.buyerName || 'Pembeli',
+                sellerId: sellerId,
+                items: (o.items || []).map(item => ({
+                  productId: item.productId,
+                  name: item.productName,
+                  price: Number(item.unitPrice),
+                  qty: item.quantity
+                })),
+                totalAmount: Number(o.totalAmount),
+                marginPercentage: 50.0,
+                paymentMethod: 'transfer_bank',
+                status: orderStatus,
+                createdAt: o.createdAt,
+                paymentProofUrl: proofUrl
+              };
+            }));
+            return { success: true, data: mapped };
+          }
+        } catch (err) {
+          console.warn('Backend fetch failed for seller orders:', err);
+        }
+      }
+      return { success: true, data: [] };
     },
 
     updateOrderStatus: async (sellerId, orderId, status) => {
-      await delay(150);
-      const orders = getDB('ecom_orders');
-      const idx = orders.findIndex(o => o.id === orderId && o.sellerId === sellerId);
-      if (idx !== -1) {
-        orders[idx].status = status;
-        saveDB('ecom_orders', orders);
-        return { success: true, message: `Status pesanan diperbarui menjadi ${status}.`, data: orders[idx] };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        const statusMap = {
+          menunggu: 'PENDING_PAYMENT',
+          diproses: 'PROCESSING',
+          dikirim: 'SHIPPED',
+          terkirim: 'COMPLETED',
+          cancelled: 'CANCELLED'
+        };
+        const backendStatus = statusMap[status] || status;
+        const response = await fetch(`http://localhost:8081/api/v1/seller/orders/${orderId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: backendStatus })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || 'Gagal memperbarui status pesanan.');
+        }
+        return { success: true, message: `Status pesanan diperbarui menjadi ${status}.` };
       }
-      throw new Error('Pesanan tidak ditemukan.');
+      throw new Error('Anda harus login terlebih dahulu.');
     },
 
     confirmManualPayment: async (sellerId, orderId) => {
-      await delay(200);
-      const orders = getDB('ecom_orders');
-      const idx = orders.findIndex(o => o.id === orderId && o.sellerId === sellerId);
-      if (idx !== -1) {
-        orders[idx].status = 'diproses'; // Move from proof_submitted to processing/diproses
-        saveDB('ecom_orders', orders);
-        return { success: true, message: 'Pembayaran manual berhasil dikonfirmasi.', data: orders[idx] };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        const response = await fetch(`http://localhost:8081/api/v1/seller/orders/${orderId}/payment/confirm-manual`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ action: 'APPROVE', note: 'Pembayaran manual disetujui penjual.' })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || 'Gagal mengonfirmasi pembayaran manual.');
+        }
+        return { success: true, message: 'Pembayaran manual berhasil dikonfirmasi.' };
       }
-      throw new Error('Pesanan tidak ditemukan.');
+      throw new Error('Anda harus login terlebih dahulu.');
     },
 
     getAnalytics: async (sellerId) => {
-      await delay(200);
-      const orders = getDB('ecom_orders').filter(o => o.sellerId === sellerId);
-      const products = getDB('ecom_products').filter(p => p.sellerId === sellerId && p.status !== 'nonaktif');
-
-      const completedOrders = orders.filter(o => o.status === 'terkirim');
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) return { success: true, data: {} };
       
+      const prodRes = await api.seller.getProducts(sellerId);
+      const orderRes = await api.seller.getOrders(sellerId);
+      
+      const products = prodRes.data || [];
+      const orders = orderRes.data || [];
+      
+      const completedOrders = orders.filter(o => o.status === 'terkirim');
       const totalRevenue = orders
-        .filter(o => ['terkirim', 'dikirim', 'diproses'].includes(o.status))
+        .filter(o => ['terkirim', 'dikirim', 'diproses', 'proof_submitted'].includes(o.status))
         .reduce((sum, o) => sum + o.totalAmount, 0);
 
-      // High value orders
+      const lowStockProducts = products.filter(p => p.stock <= p.reorderThreshold);
+
       const highValueOrders = [...orders]
         .sort((a, b) => b.totalAmount - a.totalAmount)
         .slice(0, 8);
 
-      // Low stock list
-      const lowStockProducts = products.filter(p => p.stock <= p.reorderThreshold);
-
-      // Top products based on revenue
       const topProducts = [...products]
-        .sort((a, b) => b.revenue30d - a.revenue30d)
         .slice(0, 5);
 
       return {
@@ -640,21 +746,21 @@ export const api = {
           pendingConfirmations: orders.filter(o => o.status === 'proof_submitted').length,
           monthlyRevenue: totalRevenue,
           aov: orders.length ? Math.round(totalRevenue / orders.length) : 0,
-          returnRate: 2.9, // static metric
-          todayRevenue: totalRevenue * 0.1, // simulated today's revenue (10% of total)
-          todayTarget: totalRevenue * 0.12, // target
+          returnRate: 2.9,
+          todayRevenue: totalRevenue * 0.1,
+          todayTarget: totalRevenue * 0.12 || 1000000,
           todayOrders: Math.round(orders.length * 0.08) || 1,
           lowStockCount: lowStockProducts.length,
           lowStockProducts,
           topProducts,
           highValueOrders,
           paymentDistribution: {
-            transfer_bank: orders.filter(o => o.paymentMethod === 'transfer_bank').reduce((sum, o) => sum + o.totalAmount, 0),
-            gopay: orders.filter(o => o.paymentMethod === 'gopay').reduce((sum, o) => sum + o.totalAmount, 0),
-            ovo: orders.filter(o => o.paymentMethod === 'ovo').reduce((sum, o) => sum + o.totalAmount, 0),
-            qris: orders.filter(o => o.paymentMethod === 'qris').reduce((sum, o) => sum + o.totalAmount, 0),
-            dana: orders.filter(o => o.paymentMethod === 'dana').reduce((sum, o) => sum + o.totalAmount, 0),
-            cod: orders.filter(o => o.paymentMethod === 'cod').reduce((sum, o) => sum + o.totalAmount, 0)
+            transfer_bank: orders.reduce((sum, o) => sum + o.totalAmount, 0),
+            gopay: 0,
+            ovo: 0,
+            qris: 0,
+            dana: 0,
+            cod: 0
           }
         }
       };
@@ -735,258 +841,354 @@ export const api = {
     },
 
     getCart: async (buyerId) => {
-      await delay(100);
-      const carts = getDB('ecom_carts');
-      const cart = carts[buyerId] || [];
-      const products = getDB('ecom_products');
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) return { success: true, data: [] };
+      const response = await fetch('http://localhost:8081/api/v1/cart', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Gagal mengambil keranjang');
+      const result = await response.json();
+      const cartItems = result.data?.items || [];
       
-      const cartDetails = cart.map(item => {
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-          return {
-            ...item,
-            name: product.name,
-            price: product.sellPrice,
-            imageUrl: product.imageUrl,
-            storeName: product.storeName,
-            sellerId: product.sellerId,
-            stock: product.stock
-          };
+      const mappedItems = await Promise.all(cartItems.map(async (item) => {
+        try {
+          const prodRes = await fetch(`http://localhost:8081/api/v1/products/${item.productId}`);
+          if (prodRes.ok) {
+            const prodData = await prodRes.json();
+            const product = prodData.data;
+            return {
+              id: item.id,
+              productId: item.productId,
+              qty: item.quantity,
+              name: item.productName,
+              price: Number(item.productPrice),
+              imageUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#EB5E28"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#FFF">${item.productName}</text></svg>`),
+              storeName: product.sellerStoreName || 'Toko Nusantara',
+              sellerId: product.sellerId,
+              stock: item.productStock
+            };
+          }
+        } catch (e) {
+          console.warn('Failed to fetch product details for cart item:', e);
         }
-        return null;
-      }).filter(Boolean);
-
-      return { success: true, data: cartDetails };
+        return {
+          id: item.id,
+          productId: item.productId,
+          qty: item.quantity,
+          name: item.productName,
+          price: Number(item.productPrice),
+          imageUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#EB5E28"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#FFF">${item.productName}</text></svg>`),
+          storeName: 'Toko Nusantara',
+          sellerId: null,
+          stock: item.productStock
+        };
+      }));
+      return { success: true, data: mappedItems };
     },
 
     addToCart: async (buyerId, { productId, qty = 1 }) => {
-      await delay(100);
-      const carts = getDB('ecom_carts');
-      const cart = carts[buyerId] || [];
-      
-      const products = getDB('ecom_products');
-      const product = products.find(p => p.id === productId);
-      if (!product || product.stock < qty) {
-        throw new Error('Stok produk tidak mencukupi.');
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) throw new Error('Anda harus login terlebih dahulu.');
+      const response = await fetch('http://localhost:8081/api/v1/cart/items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ productId, quantity: qty })
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'Gagal menambahkan ke keranjang');
       }
-
-      const existingIndex = cart.findIndex(item => item.productId === productId);
-      if (existingIndex !== -1) {
-        cart[existingIndex].qty += qty;
-      } else {
-        cart.push({ productId, qty });
-      }
-
-      carts[buyerId] = cart;
-      saveDB('ecom_carts', carts);
-      return { success: true, message: 'Produk ditambahkan ke keranjang.', data: cart };
+      return { success: true, message: 'Produk ditambahkan ke keranjang.' };
     },
 
     updateCartItem: async (buyerId, productId, qty) => {
-      await delay(100);
-      const carts = getDB('ecom_carts');
-      const cart = carts[buyerId] || [];
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) throw new Error('Anda harus login terlebih dahulu.');
       
-      const products = getDB('ecom_products');
-      const product = products.find(p => p.id === productId);
-      if (!product) throw new Error('Produk tidak ditemukan.');
-      if (product.stock < qty) throw new Error('Stok produk tidak mencukupi.');
-
-      const idx = cart.findIndex(item => item.productId === productId);
-      if (idx !== -1) {
-        cart[idx].qty = qty;
-        carts[buyerId] = cart;
-        saveDB('ecom_carts', carts);
-        return { success: true, data: cart };
+      const cartRes = await api.buyer.getCart(buyerId);
+      const cartItems = cartRes.data || [];
+      const item = cartItems.find(i => i.productId === productId);
+      if (!item) throw new Error('Item tidak ditemukan di keranjang.');
+      
+      const response = await fetch(`http://localhost:8081/api/v1/cart/items/${item.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ quantity: qty })
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'Gagal mengubah kuantitas.');
       }
-      throw new Error('Item tidak ditemukan di keranjang.');
+      return { success: true };
     },
 
     removeFromCart: async (buyerId, productId) => {
-      await delay(100);
-      const carts = getDB('ecom_carts');
-      let cart = carts[buyerId] || [];
-      cart = cart.filter(item => item.productId !== productId);
-      carts[buyerId] = cart;
-      saveDB('ecom_carts', carts);
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) throw new Error('Anda harus login terlebih dahulu.');
+      
+      const cartRes = await api.buyer.getCart(buyerId);
+      const cartItems = cartRes.data || [];
+      const item = cartItems.find(i => i.productId === productId);
+      if (!item) throw new Error('Item tidak ditemukan di keranjang.');
+      
+      const response = await fetch(`http://localhost:8081/api/v1/cart/items/${item.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.message || 'Gagal menghapus item.');
+      }
       return { success: true, message: 'Item dihapus dari keranjang.' };
     },
 
     checkout: async (buyerId, { paymentMethod }) => {
-      await delay(200);
-      const carts = getDB('ecom_carts');
-      const cart = carts[buyerId] || [];
-      if (cart.length === 0) throw new Error('Keranjang belanja kosong.');
-
-      const products = getDB('ecom_products');
-      const orders = getDB('ecom_orders');
-      const users = getDB('ecom_users');
-      const buyer = users.find(u => u.id === buyerId);
-
-      // Map cart items to actual products & check stock
-      const orderItems = [];
-      let totalAmount = 0;
-      let sellerId = null;
-
-      for (const item of cart) {
-        const prod = products.find(p => p.id === item.productId);
-        if (!prod) throw new Error('Salah satu produk di keranjang tidak ditemukan.');
-        if (prod.stock < item.qty) throw new Error(`Stok ${prod.name} tidak mencukupi.`);
-        
-        // Ensure for simplicity all checked out items belong to the same seller in one order
-        if (sellerId === null) {
-          sellerId = prod.sellerId;
-        } else if (sellerId !== prod.sellerId) {
-          throw new Error('Maaf, untuk demo ini silakan checkout produk dari satu toko yang sama secara terpisah.');
-        }
-
-        prod.stock -= item.qty;
-        prod.sold30d += item.qty;
-        prod.revenue30d += prod.sellPrice * item.qty;
-        totalAmount += prod.sellPrice * item.qty;
-
-        orderItems.push({
-          productId: prod.id,
-          name: prod.name,
-          price: prod.sellPrice,
-          qty: item.qty
-        });
-      }
-
-      // Create new order
-      const newOrder = {
-        id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-        buyerId,
-        buyerName: buyer?.name || 'Pembeli',
-        sellerId,
-        items: orderItems,
-        totalAmount,
-        marginPercentage: 50.0, // default placeholder margin
-        paymentMethod,
-        status: paymentMethod === 'cod' ? 'diproses' : 'menunggu', // COD langsung diproses, others pending payment
-        createdAt: new Date().toISOString(),
-        paymentProofUrl: null
-      };
-
-      orders.push(newOrder);
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) throw new Error('Anda harus login terlebih dahulu.');
       
-      // Update DB
-      saveDB('ecom_products', products);
-      saveDB('ecom_orders', orders);
+      const cartRes = await api.buyer.getCart(buyerId);
+      const cartItems = cartRes.data || [];
+      if (cartItems.length === 0) throw new Error('Keranjang belanja kosong.');
       
-      // Clear Cart
-      carts[buyerId] = [];
-      saveDB('ecom_carts', carts);
-
-      // Increase order count in seller profile
-      const sellers = getDB('ecom_sellers');
-      const sIdx = sellers.findIndex(s => s.id === sellerId);
-      if (sIdx !== -1) {
-        sellers[sIdx].ordersCount += 1;
-        saveDB('ecom_sellers', sellers);
+      const cartItemIds = cartItems.map(item => item.id);
+      
+      const response = await fetch('http://localhost:8081/api/v1/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          cartItemIds,
+          shippingAddress: "Alamat Pengiriman Default (Toko Nusantara)",
+          notes: `Metode Pembayaran: ${paymentMethod}`
+        })
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'Checkout gagal.');
       }
-
+      
       return {
         success: true,
         message: 'Pesanan berhasil dibuat.',
-        data: newOrder
+        data: result.data
       };
     },
 
     getOrders: async (buyerId) => {
-      await delay(150);
-      const orders = getDB('ecom_orders');
-      return {
-        success: true,
-        data: orders.filter(o => o.buyerId === buyerId)
-      };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (token) {
+        try {
+          const response = await fetch('http://localhost:8081/api/v1/orders', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const result = await response.json();
+            const items = result.data?.content || result.data || [];
+            
+            const mapped = await Promise.all(items.map(async (o) => {
+              let orderStatus = 'menunggu';
+              let proofUrl = null;
+              if (o.status === 'PAID' || o.status === 'PROCESSING') {
+                orderStatus = 'diproses';
+              } else if (o.status === 'SHIPPED') {
+                orderStatus = 'dikirim';
+              } else if (o.status === 'COMPLETED') {
+                orderStatus = 'terkirim';
+              } else if (o.status === 'CANCELLED') {
+                orderStatus = 'cancelled';
+              } else if (o.status === 'PENDING_PAYMENT') {
+                try {
+                  const payRes = await fetch(`http://localhost:8081/api/v1/orders/${o.id}/payment`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  if (payRes.ok) {
+                    const payData = await payRes.json();
+                    if (payData.data?.status === 'PROOF_SUBMITTED') {
+                      orderStatus = 'proof_submitted';
+                      proofUrl = payData.data.paymentProofUrl;
+                    }
+                  }
+                } catch (e) {
+                  console.warn('Failed to fetch payment details for order:', o.id, e);
+                }
+              }
+
+              return {
+                id: o.id,
+                buyerId: o.buyerId,
+                buyerName: o.buyerName || 'Pembeli',
+                sellerId: o.items?.[0]?.sellerId || '',
+                items: (o.items || []).map(item => ({
+                  productId: item.productId,
+                  name: item.productName,
+                  price: Number(item.unitPrice),
+                  qty: item.quantity
+                })),
+                totalAmount: Number(o.totalAmount),
+                marginPercentage: 50.0,
+                paymentMethod: 'transfer_bank',
+                status: orderStatus,
+                createdAt: o.createdAt,
+                paymentProofUrl: proofUrl
+              };
+            }));
+            return { success: true, data: mapped };
+          }
+        } catch (err) {
+          console.warn('Backend fetch failed for buyer orders:', err);
+        }
+      }
+      return { success: true, data: [] };
     },
 
     uploadPaymentProof: async (orderId, { proofDataUrl }) => {
-      await delay(250);
-      const orders = getDB('ecom_orders');
-      const idx = orders.findIndex(o => o.id === orderId);
-      if (idx !== -1) {
-        orders[idx].status = 'proof_submitted';
-        orders[idx].paymentProofUrl = proofDataUrl;
-        saveDB('ecom_orders', orders);
-        return { success: true, message: 'Bukti pembayaran berhasil diunggah.', data: orders[idx] };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) throw new Error('Anda harus login terlebih dahulu.');
+      
+      const response = await fetch(`http://localhost:8081/api/v1/orders/${orderId}/payment-proof`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ proofDataUrl })
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'Gagal mengunggah bukti pembayaran.');
       }
-      throw new Error('Pesanan tidak ditemukan.');
+      return { success: true, message: 'Bukti pembayaran berhasil diunggah.' };
     }
   },
 
   chat: {
     getConversations: async (userId, role) => {
-      await delay(150);
-      const conversations = getDB('ecom_conversations');
-      if (role === 'buyer') {
-        return { success: true, data: conversations.filter(c => c.buyerId === userId) };
-      } else {
-        // find sellerId
-        const users = getDB('ecom_users');
-        const user = users.find(u => u.id === userId);
-        const sellerId = user?.sellerId;
-        return { success: true, data: conversations.filter(c => c.sellerId === sellerId) };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) return { success: true, data: [] };
+      try {
+        const response = await fetch('http://localhost:8081/api/v1/conversations', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const result = await response.json();
+          const items = result.data?.content || result.data || [];
+          
+          const mapped = items.map(c => ({
+            id: c.id,
+            buyerId: c.buyerId,
+            buyerName: c.buyerName,
+            sellerId: c.sellerId,
+            storeName: c.sellerStoreName || 'Toko Nusantara',
+            lastMessage: 'Buka obrolan.',
+            lastUpdated: c.updatedAt
+          }));
+          return { success: true, data: mapped };
+        }
+      } catch (err) {
+        console.warn('Backend fetch failed for conversations:', err);
       }
+      return { success: true, data: [] };
     },
 
     getMessages: async (conversationId) => {
-      await delay(100);
-      const conversations = getDB('ecom_conversations');
-      const conv = conversations.find(c => c.id === conversationId);
-      if (conv) {
-        return { success: true, data: conv.messages || [] };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) return { success: true, data: [] };
+      try {
+        const response = await fetch(`http://localhost:8081/api/v1/conversations/${conversationId}/messages`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const result = await response.json();
+          const items = result.data?.content || result.data || [];
+          const mapped = items.map(msg => ({
+            id: msg.id,
+            senderId: msg.senderId,
+            content: msg.messageType === 'TEXT' ? msg.content : '',
+            timestamp: msg.createdAt,
+            attachmentUrl: msg.messageType === 'IMAGE' ? msg.content : null
+          }));
+          mapped.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+          return { success: true, data: mapped };
+        }
+      } catch (err) {
+        console.warn('Backend fetch failed for messages:', err);
       }
       return { success: true, data: [] };
     },
 
     sendMessage: async (conversationId, { senderId, content, attachmentUrl = null }) => {
-      await delay(100);
-      const conversations = getDB('ecom_conversations');
-      const idx = conversations.findIndex(c => c.id === conversationId);
-      if (idx !== -1) {
-        const newMessage = {
-          id: `msg-${Date.now()}`,
-          senderId,
-          content,
-          timestamp: new Date().toISOString(),
-          attachmentUrl
-        };
-        conversations[idx].messages.push(newMessage);
-        conversations[idx].lastMessage = content || 'Mengirim bukti/gambar';
-        conversations[idx].lastUpdated = new Date().toISOString();
-        saveDB('ecom_conversations', conversations);
-        return { success: true, data: newMessage };
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) throw new Error('Anda harus login terlebih dahulu.');
+      
+      const payload = {
+        content: attachmentUrl || content,
+        messageType: attachmentUrl ? 'IMAGE' : 'TEXT'
+      };
+
+      const response = await fetch(`http://localhost:8081/api/v1/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'Gagal mengirim pesan.');
       }
-      throw new Error('Percakapan tidak ditemukan.');
+      const msg = result.data;
+      return {
+        success: true,
+        data: {
+          id: msg.id,
+          senderId: msg.senderId,
+          content: msg.messageType === 'TEXT' ? msg.content : '',
+          timestamp: msg.createdAt,
+          attachmentUrl: msg.messageType === 'IMAGE' ? msg.content : null
+        }
+      };
     },
 
     createConversation: async ({ buyerId, sellerId }) => {
-      await delay(150);
-      const conversations = getDB('ecom_conversations');
-      let conv = conversations.find(c => c.buyerId === buyerId && c.sellerId === sellerId);
-      
-      if (!conv) {
-        const sellers = getDB('ecom_sellers');
-        const seller = sellers.find(s => s.id === sellerId);
-        const users = getDB('ecom_users');
-        const buyer = users.find(u => u.id === buyerId);
+      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) throw new Error('Anda harus login terlebih dahulu.');
 
-        conv = {
-          id: `conv-${Date.now()}`,
-          buyerId,
-          buyerName: buyer?.name || 'Pembeli',
-          sellerId,
-          storeName: seller?.storeName || 'Toko Penjual',
-          lastMessage: 'Memulai percakapan baru.',
-          lastUpdated: new Date().toISOString(),
-          messages: []
-        };
-        conversations.push(conv);
-        saveDB('ecom_conversations', conversations);
+      const response = await fetch('http://localhost:8081/api/v1/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ sellerId })
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'Gagal membuat obrolan baru.');
       }
-      return { success: true, data: conv };
+      const c = result.data;
+      return {
+        success: true,
+        data: {
+          id: c.id,
+          buyerId: c.buyerId,
+          buyerName: c.buyerName,
+          sellerId: c.sellerId,
+          storeName: c.sellerStoreName || 'Toko Nusantara',
+          lastMessage: 'Memulai percakapan baru.',
+          lastUpdated: c.updatedAt
+        }
+      };
     }
   }
 };

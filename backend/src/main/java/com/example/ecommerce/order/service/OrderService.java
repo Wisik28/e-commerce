@@ -9,6 +9,8 @@ import com.example.ecommerce.order.entity.OrderItem;
 import com.example.ecommerce.order.repository.OrderItemRepository;
 import com.example.ecommerce.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import com.example.ecommerce.order.entity.OrderStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -85,5 +87,25 @@ public class OrderService {
                 .paidAt(order.getPaidAt())
                 .completedAt(order.getCompletedAt())
                 .build();
+    }
+
+    @Transactional
+    public OrderResponse updateOrderStatus(UUID orderId, UUID sellerId, String status) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        boolean hasItems = orderItemRepository.findByOrderId(orderId).stream()
+                .anyMatch(item -> item.getSeller().getId().equals(sellerId));
+
+        if (!hasItems) {
+            throw new ForbiddenException("You do not have access to this order");
+        }
+
+        order.setStatus(OrderStatus.valueOf(status.toUpperCase()));
+        if (status.equalsIgnoreCase("COMPLETED")) {
+            order.setCompletedAt(java.time.Instant.now());
+        }
+        orderRepository.save(order);
+        return toOrderResponse(order);
     }
 }

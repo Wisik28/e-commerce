@@ -35,7 +35,7 @@ export const RoleGuard = ({ allow }) => {
 
     return (
       <div className="forbidden-container">
-        <ShieldAlert size={64} className="star-icon" style={{ color: 'var(--danger)' }} />
+        <ShieldAlert size={64} className="shield-icon" style={{ color: 'var(--danger)' }} />
         <h1 className="forbidden-title">403</h1>
         <h2 className="forbidden-subtitle">Akses Tidak Diizinkan</h2>
         <p className="forbidden-desc">
