@@ -20,7 +20,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.ecommerce.payment.entity.PaymentProof;
+import com.example.ecommerce.payment.entity.ReviewStatus;
+import com.example.ecommerce.payment.repository.PaymentProofRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -33,6 +37,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentGateway paymentGateway;
     private final AuditLogService auditLogService;
+    private final PaymentProofRepository paymentProofRepository;
 
     @Transactional
     public PaymentResponse createPayment(UUID buyerId, UUID orderId, CreatePaymentRequest request) {
@@ -129,7 +134,52 @@ public class PaymentService {
         }
     }
 
+    @Transactional
+    public void uploadPaymentProof(UUID buyerId, UUID orderId, String proofDataUrl) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        if (!order.getBuyer().getId().equals(buyerId)) {
+            throw new BusinessRuleException("Order does not belong to this buyer");
+        }
+
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", "orderId", orderId));
+
+        payment.setStatus(PaymentStatus.PROOF_SUBMITTED);
+        payment.setPaymentMethod(PaymentMethod.MANUAL);
+        paymentRepository.save(payment);
+
+        List<PaymentProof> existingProofs = paymentProofRepository.findByPaymentId(payment.getId());
+        paymentProofRepository.deleteAll(existingProofs);
+
+        PaymentProof proof = PaymentProof.builder()
+                .payment(payment)
+                .uploadedBy(order.getBuyer())
+                .fileUrl(proofDataUrl)
+                .fileName("proof_transfer.png")
+                .mimeType("image/png")
+                .fileSize((long) proofDataUrl.length())
+                .submittedAt(Instant.now())
+                .reviewStatus(ReviewStatus.PENDING)
+                .build();
+
+        paymentProofRepository.save(proof);
+
+        auditLogService.log(buyerId, "PAYMENT_PROOF_UPLOADED", "PAYMENT", payment.getId());
+    }
+
     private PaymentResponse toResponse(Payment payment) {
+        String proofUrl = null;
+        try {
+            List<PaymentProof> proofs = paymentProofRepository.findByPaymentId(payment.getId());
+            if (!proofs.isEmpty()) {
+                proofUrl = proofs.get(0).getFileUrl();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch payment proof URL: {}", e.getMessage());
+        }
+
         return PaymentResponse.builder()
                 .id(payment.getId())
                 .orderId(payment.getOrder().getId())
@@ -141,6 +191,7 @@ public class PaymentService {
                 .expiresAt(payment.getExpiresAt())
                 .paidAt(payment.getPaidAt())
                 .createdAt(payment.getCreatedAt())
+                .paymentProofUrl(proofUrl)
                 .build();
     }
 }

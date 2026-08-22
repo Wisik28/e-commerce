@@ -7,9 +7,7 @@ import {
   Settings, 
   LogOut, 
   RefreshCw, 
-  Calendar,
-  Users,
-  AlertCircle
+  Calendar
 } from 'lucide-react';
 
 export const AdminLayout = () => {

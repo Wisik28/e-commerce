@@ -15,7 +15,6 @@ export const Login = () => {
   // Form states
   const [emailOrUser, setEmailOrUser] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
 
   // Register states
   const [regName, setRegName] = useState('');
@@ -165,17 +164,7 @@ export const Login = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', fontSize: '0.825rem' }}>
-              <label className="checkbox-container">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
-                <span className="checkbox-box"></span>
-                <span>Ingat saya</span>
-              </label>
-
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem', fontSize: '0.825rem' }}>
               <span style={{ color: 'var(--primary)', fontWeight: '600', cursor: 'pointer' }}>
                 Lupa Password?
               </span>

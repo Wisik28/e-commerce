@@ -10,10 +10,9 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Load persisted auth from sessionStorage
     const savedUser = sessionStorage.getItem('ecom_auth_user');
-    const savedToken = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+    const savedToken = sessionStorage.getItem('ecom_auth_token');
     if (savedToken) {
       sessionStorage.setItem('ecom_auth_token', savedToken);
-      sessionStorage.setItem('ecom_token', savedToken);
       let userData = savedUser ? JSON.parse(savedUser) : {};
       try {
         const payload = JSON.parse(atob(savedToken.split('.')[1]));
@@ -40,7 +39,6 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         sessionStorage.setItem('ecom_auth_user', JSON.stringify(userData));
         sessionStorage.setItem('ecom_auth_token', token);
-        sessionStorage.setItem('ecom_token', token);
       }
       return response;
     } catch (error) {
@@ -61,6 +59,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     sessionStorage.removeItem('ecom_auth_user');
     sessionStorage.removeItem('ecom_auth_token');
+    sessionStorage.removeItem('ecom_token');
   };
 
   return (

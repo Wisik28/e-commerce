@@ -9,7 +9,7 @@ import {
 import { StatCard } from '../../components/shared/StatCard';
 import { DonutChart } from '../../components/shared/Charts';
 import { DataTable } from '../../components/shared/DataTable';
-import { Package, AlertTriangle, AlertCircle, Coins, Search, RefreshCw, ShoppingCart } from 'lucide-react';
+import { Package, AlertTriangle, AlertCircle, Coins, Search, ShoppingCart } from 'lucide-react';
 
 export const ProductsInventoryPage = () => {
   const { user } = useAuth();
