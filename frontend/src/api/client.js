@@ -6,7 +6,7 @@ async function safeJson(res) {
   let data = null;
   if (contentType && contentType.includes("application/json")) {
     try {
-      data = await safeJson(res);
+      data = await res.json();
     } catch (e) {
       // ignore
     }
@@ -14,10 +14,10 @@ async function safeJson(res) {
   
   if (!res.ok) {
     if (res.status === 401) {
-      throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
+      throw new Error((data && data.message) || 'Sesi Anda telah berakhir. Silakan login kembali.');
     }
     if (res.status === 403) {
-      throw new Error('Anda tidak memiliki akses untuk melakukan tindakan ini.');
+      throw new Error((data && data.message) || 'Anda tidak memiliki akses untuk melakukan tindakan ini.');
     }
     if (!data) {
       throw new Error(`Gagal memproses permintaan (Status: ${res.status}).`);
@@ -53,12 +53,12 @@ const parseJwt = (token) => {
 
 export const api = {
   auth: {
-    login: async (usernameOrEmail, password) => {
+    login: async (usernameOrEmail, password, recaptchaToken) => {
       try {
         const response = await fetch(API_BASE_URL + '/api/v1/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: usernameOrEmail, password })
+          body: JSON.stringify({ email: usernameOrEmail, password, recaptchaToken })
         });
 
         const result = await safeJson(response);

@@ -95,7 +95,7 @@ export const BuyerLayout = () => {
       <header className="buyer-topbar">
         <div className="buyer-brand" onClick={() => navigate('/buyer')}>
           <ShoppingBag size={24} style={{ color: 'var(--primary)' }} />
-          <span>Paingan Store</span>
+          <span>Paingan's Market</span>
         </div>
 
         <form onSubmit={handleSearchSubmit} className="buyer-search">

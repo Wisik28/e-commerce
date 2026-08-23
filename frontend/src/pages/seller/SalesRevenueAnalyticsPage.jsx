@@ -190,7 +190,6 @@ export const SalesRevenueAnalyticsPage = () => {
 
           <HorizontalBarList items={paymentItems} />
         </div>
-      </div>
 
       {/* High Value Orders Table */}
       <div className="card-section" style={{ marginTop: '1.5rem' }}>
