@@ -56,7 +56,8 @@ const Divider = () => (
 export const Login = () => {
   const { login, register, loginWithGoogle, registerGoogleBuyer, registerGoogleSeller } = useAuth();
   const navigate = useNavigate();
-  const recaptchaRef = useRef(null);
+  const loginRecaptchaRef = useRef(null);
+  const regRecaptchaRef = useRef(null);
 
   const [isLoginView, setIsLoginView] = useState(true);
   const [error, setError] = useState('');
@@ -75,8 +76,9 @@ export const Login = () => {
   const [regRole, setRegRole] = useState('buyer');
   const [regStoreName, setRegStoreName] = useState('');
 
-  // reCAPTCHA state
-  const [captchaToken, setCaptchaToken] = useState('');
+  // reCAPTCHA states
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState('');
+  const [regCaptchaToken, setRegCaptchaToken] = useState('');
 
   // Google OAuth: state untuk saat user belum terdaftar (perlu isi no HP dll)
   const [googlePendingToken, setGooglePendingToken] = useState(null);
@@ -85,6 +87,17 @@ export const Login = () => {
   const [googlePhone, setGooglePhone] = useState('');
   const [googleStoreName, setGoogleStoreName] = useState('');
   const [googleStoreDesc, setGoogleStoreDesc] = useState('');
+
+  // Reset captcha when switching views
+  const toggleView = (toLogin) => {
+    setError('');
+    setSuccess('');
+    setIsLoginView(toLogin);
+    setLoginCaptchaToken('');
+    setRegCaptchaToken('');
+    loginRecaptchaRef.current?.reset();
+    regRecaptchaRef.current?.reset();
+  };
 
   // ==================== NAVIGASI SETELAH LOGIN ====================
   const navigateByRole = (role) => {
@@ -97,12 +110,20 @@ export const Login = () => {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!loginCaptchaToken) {
+      setError('Harap selesaikan verifikasi reCAPTCHA terlebih dahulu.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await login(emailOrUser, password);
+      const res = await login(emailOrUser, password, loginCaptchaToken);
       if (res.success) navigateByRole(res.data.user.role);
     } catch (err) {
       setError(err.message || 'Login gagal.');
+      loginRecaptchaRef.current?.reset();
+      setLoginCaptchaToken('');
     } finally {
       setLoading(false);
     }
@@ -120,7 +141,7 @@ export const Login = () => {
       return;
     }
 
-    if (!captchaToken) {
+    if (!regCaptchaToken) {
       setError('Harap selesaikan verifikasi reCAPTCHA terlebih dahulu.');
       return;
     }
@@ -134,23 +155,25 @@ export const Login = () => {
         name: regName,
         role: regRole,
         storeName: regRole === 'seller' ? regStoreName : undefined,
-        recaptchaToken: captchaToken,
+        recaptchaToken: regCaptchaToken,
       });
 
       if (res.success) {
         setSuccess(res.message);
         setRegName(''); setRegEmail(''); setRegPhoneNumber('');
         setRegPassword(''); setRegStoreName('');
-        setCaptchaToken('');
-        recaptchaRef.current?.reset();
+        setRegCaptchaToken('');
+        regRecaptchaRef.current?.reset();
         setTimeout(() => {
-          setIsLoginView(true);
+          toggleView(true);
           setEmailOrUser(regEmail);
           setSuccess('');
         }, 2000);
       }
     } catch (err) {
       setError(err.message || 'Registrasi gagal.');
+      regRecaptchaRef.current?.reset();
+      setRegCaptchaToken('');
     } finally {
       setLoading(false);
     }
@@ -230,8 +253,7 @@ export const Login = () => {
     return (
       <div className="auth-page-container">
         <div className="auth-card">
-          <div className="auth-header">
-            <div style={{ margin: '0 auto 1rem', fontSize: '2.5rem', textAlign: 'center' }}>🔗</div>
+          <div className="auth-header">            
             <h2>Lengkapi Data Anda</h2>
             <p>Akun Google Anda belum terdaftar. Isi data berikut untuk menyelesaikan pendaftaran.</p>
             {googlePendingUser?.email && (
@@ -246,7 +268,7 @@ export const Login = () => {
                 fontWeight: '600',
                 textAlign: 'center'
               }}>
-                📧 {googlePendingUser.email}
+                {googlePendingUser.email}
               </div>
             )}
           </div>
@@ -386,10 +408,20 @@ export const Login = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem', fontSize: '0.825rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.25rem', fontSize: '0.825rem' }}>
               <span style={{ color: 'var(--primary)', fontWeight: '600', cursor: 'pointer' }}>
                 Lupa Password?
               </span>
+            </div>
+
+            {/* reCAPTCHA untuk Login */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+              <ReCAPTCHA
+                ref={loginRecaptchaRef}
+                sitekey={RECAPTCHA_SITE_KEY}
+                onChange={(token) => setLoginCaptchaToken(token || '')}
+                onExpired={() => setLoginCaptchaToken('')}
+              />
             </div>
 
             <button type="submit" className="btn-primary" style={{ width: '100%', padding: '0.75rem' }} disabled={loading}>
@@ -398,20 +430,6 @@ export const Login = () => {
 
             <div className="auth-toggle-link">
               Belum punya akun? <span onClick={() => setIsLoginView(false)}>Daftar Sekarang</span>
-            </div>
-
-            {/* Demo Credentials Panel */}
-            <div className="credentials-helper">
-              <h5>🔑 Klik untuk Akun Demo:</h5>
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                <button type="button" className="btn-small" onClick={() => setDemoCredentials('admin')}>Admin</button>
-                <button type="button" className="btn-small" onClick={() => setDemoCredentials('seller')}>Penjual</button>
-                <button type="button" className="btn-small" onClick={() => setDemoCredentials('buyer')}>Pembeli</button>
-              </div>
-              <div className="credentials-list" style={{ marginTop: '0.5rem' }}>
-                <div className="credentials-item">Email: <span>admin@ecommerce.com</span> | <span>penjual@gmail.com</span> | <span>pembeli@gmail.com</span></div>
-                <div className="credentials-item">Password: <span>admin123</span> | <span>seller123</span> | <span>buyer123</span></div>
-              </div>
             </div>
           </form>
         ) : (
@@ -493,13 +511,13 @@ export const Login = () => {
               </div>
             )}
 
-            {/* reCAPTCHA */}
+            {/* reCAPTCHA untuk Register */}
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
               <ReCAPTCHA
-                ref={recaptchaRef}
+                ref={regRecaptchaRef}
                 sitekey={RECAPTCHA_SITE_KEY}
-                onChange={(token) => setCaptchaToken(token || '')}
-                onExpired={() => setCaptchaToken('')}
+                onChange={(token) => setRegCaptchaToken(token || '')}
+                onExpired={() => setRegCaptchaToken('')}
               />
             </div>
 

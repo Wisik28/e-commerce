@@ -314,14 +314,12 @@ export const AdminDashboardPage = () => {
         <StatCard 
           label="Total Penjual" 
           value={sellers.length || stats.totalSellers} 
-          icon={Store} 
-          caption={`${sellers.filter(s => s.status === 'aktif').length || stats.activeSellers} aktif`} 
+          icon={Store}           
         />
         <StatCard 
           label="Total Pembeli" 
           value={buyers.length || stats.totalBuyers} 
-          icon={Users} 
-          caption="Total pembeli terdaftar" 
+          icon={Users}           
         />
       </div>
 

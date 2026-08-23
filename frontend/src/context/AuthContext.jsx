@@ -37,9 +37,9 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.setItem('ecom_auth_token', token);
   };
 
-  const login = async (usernameOrEmail, password) => {
+  const login = async (usernameOrEmail, password, recaptchaToken) => {
     try {
-      const response = await api.auth.login(usernameOrEmail, password);
+      const response = await api.auth.login(usernameOrEmail, password, recaptchaToken);
       if (response.success) {
         _persistUser(response);
       }
