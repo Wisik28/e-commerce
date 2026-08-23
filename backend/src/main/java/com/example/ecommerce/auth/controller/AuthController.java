@@ -3,7 +3,6 @@ package com.example.ecommerce.auth.controller;
 import com.example.ecommerce.auth.dto.*;
 import com.example.ecommerce.auth.service.AuthService;
 import com.example.ecommerce.common.response.ApiResponse;
-import com.example.ecommerce.common.security.RecaptchaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,12 +15,10 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
-    private final RecaptchaService recaptchaService;
 
     @PostMapping("/register/buyer")
     public ResponseEntity<ApiResponse<AuthResponse>> registerBuyer(
             @Valid @RequestBody RegisterBuyerRequest request) {
-        recaptchaService.validateToken(request.getRecaptchaToken());
         AuthResponse response = authService.registerBuyer(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Akun Pembeli berhasil registrasi", response));
@@ -30,7 +27,6 @@ public class AuthController {
     @PostMapping("/register/seller")
     public ResponseEntity<ApiResponse<AuthResponse>> registerSeller(
             @Valid @RequestBody RegisterSellerRequest request) {
-        recaptchaService.validateToken(request.getRecaptchaToken());
         AuthResponse response = authService.registerSeller(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Akun Penjual berhasil didaftarkan. Menunggu persetujuan Admin", response));
@@ -39,7 +35,6 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request) {
-        recaptchaService.validateToken(request.getRecaptchaToken());
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success("Login berhasil", response));
     }
@@ -76,13 +71,5 @@ public class AuthController {
             @Valid @RequestBody RefreshTokenRequest request) {
         AuthResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(ApiResponse.success("Token diperbarui", response));
-    }
-
-    @GetMapping("/recaptcha/config")
-    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getRecaptchaConfig() {
-        java.util.Map<String, Object> config = new java.util.HashMap<>();
-        config.put("siteKey", recaptchaService.getSiteKey());
-        config.put("enabled", recaptchaService.isEnabled());
-        return ResponseEntity.ok(ApiResponse.success("Config retrieved", config));
     }
 }

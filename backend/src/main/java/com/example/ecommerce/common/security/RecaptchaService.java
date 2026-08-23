@@ -18,7 +18,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
-@Service
+@Service("securityRecaptchaService")
 public class RecaptchaService {
 
     private static final Logger log = LoggerFactory.getLogger(RecaptchaService.class);
