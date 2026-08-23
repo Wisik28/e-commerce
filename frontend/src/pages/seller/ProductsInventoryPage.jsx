@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useDebounce } from '../../hooks/useDebounce';
 import {
   useSellerProductsQuery,
   useSellerAddProductMutation,
@@ -28,7 +29,6 @@ const ProductModal = ({ editingProduct, onClose, onSubmit, isPending }) => {
   const isEdit = !!editingProduct;
 
   const [name, setName] = useState(editingProduct?.name || '');
-  const [category, setCategory] = useState(editingProduct?.category || 'Umum');
   const [price, setPrice] = useState(editingProduct?.sellPrice || '');
   const [stock, setStock] = useState(editingProduct?.stock ?? '');
   const [weight, setWeight] = useState(editingProduct?.weightGram || '');
@@ -38,17 +38,14 @@ const ProductModal = ({ editingProduct, onClose, onSubmit, isPending }) => {
     e.preventDefault();
     onSubmit({
       name,
-      category,
       price: Number(price),
       sellPrice: Number(price),
       stock: Number(stock),
       weightGram: Number(weight) || 1000,
-      description: description || category,
+      description: description || name,
       reorderThreshold: 10
     });
   };
-
-  const categories = ['Umum', 'Fashion', 'Elektronik', 'Makanan', 'Kesehatan', 'Olahraga', 'Rumah', 'Otomotif', 'Mainan'];
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -71,25 +68,17 @@ const ProductModal = ({ editingProduct, onClose, onSubmit, isPending }) => {
               />
             </div>
 
-            {/* Kategori & Harga */}
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Kategori</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)}>
-                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Harga Jual (Rp) <span style={{ color: 'var(--danger)' }}>*</span></label>
-                <input
-                  type="number"
-                  placeholder="Contoh: 50000"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  min="0"
-                  required
-                />
-              </div>
+            {/* Harga */}
+            <div className="form-group">
+              <label>Harga Jual (Rp) <span style={{ color: 'var(--danger)' }}>*</span></label>
+              <input
+                type="number"
+                placeholder="Contoh: 50000"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                min="0"
+                required
+              />
             </div>
 
             {/* Stok & Berat */}
@@ -105,7 +94,7 @@ const ProductModal = ({ editingProduct, onClose, onSubmit, isPending }) => {
                   required
                 />
               </div>
-              <div className="form-group">
+              {/* <div className="form-group">
                 <label>Berat (gram)</label>
                 <input
                   type="number"
@@ -114,16 +103,17 @@ const ProductModal = ({ editingProduct, onClose, onSubmit, isPending }) => {
                   onChange={(e) => setWeight(e.target.value)}
                   min="0"
                 />
-              </div>
+              </div> */}
             </div>
 
             {/* Deskripsi */}
             <div className="form-group">
-              <label>Deskripsi Produk</label>
-              <input
+              <label>Deskripsi Produk <span style={{ color: 'var(--danger)' }}>*</span></label>
+              <textarea
                 type="text"
-                placeholder="Deskripsi singkat produk (opsional)..."
+                placeholder="Tambahkan detail produk yang akan Anda jual"
                 value={description}
+                required
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
@@ -154,6 +144,7 @@ export const ProductsInventoryPage = () => {
   const products = productsRes?.data || [];
 
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [filterStatus, setFilterStatus] = useState('semua');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -168,7 +159,7 @@ export const ProductsInventoryPage = () => {
 
   // ─── Filter produk ──────────────────────────────────────────────
   const filteredProducts = products.filter(p => {
-    const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = p.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
     const stock = p.stock;
     const threshold = p.reorderThreshold || 10;
 
@@ -296,7 +287,7 @@ export const ProductsInventoryPage = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--neutral-200)' }}>
-                  {['Produk', 'Kategori', 'Harga Jual', 'Stok', 'Berat', 'Status', 'Aksi'].map(h => (
+                  {['Produk', 'Harga Jual', 'Stok', 'Aksi'].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '0.75rem 1rem', fontWeight: '700', fontSize: '0.78rem', color: 'var(--neutral-500)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                       {h}
                     </th>
@@ -339,11 +330,6 @@ export const ProductsInventoryPage = () => {
                       </div>
                     </td>
 
-                    {/* Kategori */}
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--neutral-600)' }}>
-                      {product.category || '—'}
-                    </td>
-
                     {/* Harga */}
                     <td style={{ padding: '0.85rem 1rem', fontWeight: '700', color: 'var(--neutral-900)' }}>
                       {formatCurrency(product.sellPrice)}
@@ -352,16 +338,6 @@ export const ProductsInventoryPage = () => {
                     {/* Stok */}
                     <td style={{ padding: '0.85rem 1rem', fontWeight: '700' }}>
                       {product.stock} unit
-                    </td>
-
-                    {/* Berat */}
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--neutral-500)' }}>
-                      {product.weightGram ? `${product.weightGram} g` : '—'}
-                    </td>
-
-                    {/* Status stok */}
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <StatusBadge stock={product.stock} reorderThreshold={product.reorderThreshold} />
                     </td>
 
                     {/* Aksi */}

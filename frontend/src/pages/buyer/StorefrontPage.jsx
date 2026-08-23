@@ -12,12 +12,9 @@ export const StorefrontPage = () => {
   const queryParams = new URLSearchParams(location.search);
   const searchParam = queryParams.get('search') || '';
 
-  const [selectedCategory, setSelectedCategory] = useState('Semua');
-
   // React Query Hooks
   const { data: productsRes, isLoading } = useBuyerProductsQuery({
-    search: searchParam,
-    category: selectedCategory
+    search: searchParam
   });
   const products = productsRes?.data || [];
 
@@ -42,27 +39,12 @@ export const StorefrontPage = () => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
   };
 
-  const categories = ['Semua', 'Aksesori', 'Atasan Pria', 'Atasan Wanita', 'Bawahan Pria', 'Bawahan Wanita', 'Outerwear', 'Sepatu'];
-
   return (
     <div className="catalog-container">
-      {/* Categories Horizontal Filter */}
-      <div className="filter-chips-container" style={{ marginBottom: '2rem' }}>
-        {categories.map(cat => (
-          <button
-            key={cat}
-            className={`filter-chip ${selectedCategory === cat ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(cat)}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
       {/* Grid Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--neutral-900)' }}>
-          {searchParam ? `Hasil pencarian untuk "${searchParam}"` : `Katalog Produk ${selectedCategory}`}
+          {searchParam ? `Hasil pencarian untuk "${searchParam}"` : `Katalog Produk`}
         </h3>
         <span style={{ fontSize: '0.85rem', color: 'var(--neutral-500)', fontWeight: '600' }}>
           Menampilkan {products.length} produk
@@ -81,7 +63,7 @@ export const StorefrontPage = () => {
         <div style={{ textAlign: 'center', padding: '5rem 0', color: 'var(--neutral-400)', border: '1px dashed var(--neutral-300)', borderRadius: 'var(--radius-lg)' }}>
           <Tag size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
           <p style={{ fontSize: '1rem', fontWeight: '600' }}>Maaf, produk tidak ditemukan.</p>
-          <p style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>Coba ubah kata kunci pencarian Anda atau pilih kategori lain.</p>
+          <p style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>Coba ubah kata kunci pencarian Anda.</p>
         </div>
       ) : (
         <div className="product-grid">

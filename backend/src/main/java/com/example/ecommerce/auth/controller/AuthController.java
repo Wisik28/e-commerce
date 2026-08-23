@@ -29,7 +29,7 @@ public class AuthController {
             @Valid @RequestBody RegisterSellerRequest request) {
         AuthResponse response = authService.registerSeller(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Akun Penjual berhasil didaftarkan. Menunggu persetujuan Admin", response));
+                .body(ApiResponse.success("Akun Penjual berhasil didaftarkan.", response));
     }
 
     @PostMapping("/login")
@@ -63,7 +63,7 @@ public class AuthController {
             @Valid @RequestBody GoogleRegisterSellerRequest request) {
         AuthResponse response = authService.registerGoogleSeller(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Registrasi akun penjual berhasil, menunggu verifiikasi admin", response));
+                .body(ApiResponse.success("Registrasi akun penjual berhasil.", response));
     }
 
     @PostMapping("/refresh")

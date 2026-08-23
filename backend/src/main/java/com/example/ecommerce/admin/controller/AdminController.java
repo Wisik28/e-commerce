@@ -43,6 +43,8 @@ public class AdminController {
     private final ProductRepository productRepository;
     private final OrderItemRepository orderItemRepository;
 
+    // Endpoint untuk mendapatkan data seller yang belum di-approve
+    // sementara masih belum dipakai
     @GetMapping("/sellers/pending")
     public ResponseEntity<ApiResponse<PagedResponse<SellerProfileResponse>>> getPendingSellers(
             @PageableDefault(size = 20) Pageable pageable) {
@@ -53,6 +55,8 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    // Endpoint untuk approve seller oleh admin
+    // sementara masih belum dipakai
     @PostMapping("/sellers/{sellerId}/approve")
     public ResponseEntity<ApiResponse<SellerProfileResponse>> approveSeller(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -62,6 +66,8 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success("Seller approved", response));
     }
 
+    // Endpoint untuk reject seller oleh admin
+    // sementara masih belum dipakai
     @PostMapping("/sellers/{sellerId}/reject")
     public ResponseEntity<ApiResponse<SellerProfileResponse>> rejectSeller(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -79,10 +85,11 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    // Endpoint untuk mendapatkan data semua user dengan role seller dan buyer
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<PagedResponse<Object>>> getUsers(
             @RequestParam(required = false) String role,
-            @PageableDefault(size = 20) Pageable pageable) {
+            @PageableDefault(size = 25) Pageable pageable) {
         Page<User> page;
         if (role != null) {
             page = userRepository.findByRole(UserRole.valueOf(role.toUpperCase()), pageable);
@@ -104,11 +111,9 @@ public class AdminController {
                 var profileOpt = sellerProfileRepository.findById(user.getId());
                 if (profileOpt.isPresent()) {
                     map.put("storeName", profileOpt.get().getStoreName());
-                    map.put("category", profileOpt.get().getStoreDescription());
                     map.put("verificationStatus", profileOpt.get().getVerificationStatus().name());
                 } else {
                     map.put("storeName", user.getFullName() + "'s Store");
-                    map.put("category", "General");
                     map.put("verificationStatus", "APPROVED");
                 }
                 map.put("productsCount", productRepository.countBySellerId(user.getId()));
@@ -123,6 +128,7 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    // endpoint unutuk order
     @GetMapping("/orders")
     public ResponseEntity<ApiResponse<PagedResponse<OrderResponse>>> getOrders(
             @PageableDefault(size = 20) Pageable pageable) {
@@ -133,6 +139,8 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    // endpoint unutk toggle status user
+    // masih belum terpakai
     @PostMapping("/users/{userId}/toggle-status")
     public ResponseEntity<ApiResponse<Void>> toggleUserStatus(@PathVariable UUID userId) {
         User user = userRepository.findById(userId)
@@ -147,6 +155,7 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success("Status pengguna berhasil diubah"));
     }
 
+    // endpoint untuk delete user (role buyer dan seller aja)
     @DeleteMapping("/users/{userId}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable UUID userId) {
         User user = userRepository.findById(userId)
