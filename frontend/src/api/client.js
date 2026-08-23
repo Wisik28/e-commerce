@@ -1,4 +1,32 @@
 import { getDB, saveDB } from './db';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+async function safeJson(res) {
+  const contentType = res.headers.get("content-type");
+  let data = null;
+  if (contentType && contentType.includes("application/json")) {
+    try {
+      data = await safeJson(res);
+    } catch (e) {
+      // ignore
+    }
+  }
+  
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
+    }
+    if (res.status === 403) {
+      throw new Error('Anda tidak memiliki akses untuk melakukan tindakan ini.');
+    }
+    if (!data) {
+      throw new Error(`Gagal memproses permintaan (Status: ${res.status}).`);
+    }
+  }
+  return data || {};
+}
+
+
 
 // Simulate network latency
 const delay = (ms = 150) => new Promise(resolve => setTimeout(resolve, ms));
@@ -27,13 +55,13 @@ export const api = {
   auth: {
     login: async (usernameOrEmail, password) => {
       try {
-        const response = await fetch('http://localhost:8080/api/v1/auth/login', {
+        const response = await fetch(API_BASE_URL + '/api/v1/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: usernameOrEmail, password })
         });
 
-        const result = await response.json();
+        const result = await safeJson(response);
 
         if (!response.ok) {
           throw new Error(result.message || 'Email atau password salah.');
@@ -66,13 +94,13 @@ export const api = {
 
     loginWithGoogle: async (idToken) => {
       try {
-        const response = await fetch('http://localhost:8080/api/v1/auth/google', {
+        const response = await fetch(API_BASE_URL + '/api/v1/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken })
         });
 
-        const result = await response.json();
+        const result = await safeJson(response);
 
         if (!response.ok) {
           if (response.status === 404 && result.message === 'USER_NOT_REGISTERED') {
@@ -110,13 +138,13 @@ export const api = {
 
     registerGoogleBuyer: async ({ idToken, phone }) => {
       try {
-        const response = await fetch('http://localhost:8080/api/v1/auth/google/register/buyer', {
+        const response = await fetch(API_BASE_URL + '/api/v1/auth/google/register/buyer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken, phone })
         });
 
-        const result = await response.json();
+        const result = await safeJson(response);
 
         if (!response.ok) {
           if (result.errors && result.errors.length > 0) {
@@ -150,13 +178,13 @@ export const api = {
 
     registerGoogleSeller: async ({ idToken, phone, storeName, storeDescription }) => {
       try {
-        const response = await fetch('http://localhost:8080/api/v1/auth/google/register/seller', {
+        const response = await fetch(API_BASE_URL + '/api/v1/auth/google/register/seller', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken, phone, storeName, storeDescription })
         });
 
-        const result = await response.json();
+        const result = await safeJson(response);
 
         if (!response.ok) {
           if (result.errors && result.errors.length > 0) {
@@ -192,8 +220,8 @@ export const api = {
       try {
         const isSeller = role === 'seller';
         const url = isSeller 
-          ? 'http://localhost:8080/api/v1/auth/register/seller' 
-          : 'http://localhost:8080/api/v1/auth/register/buyer';
+          ? API_BASE_URL + '/api/v1/auth/register/seller' 
+          : API_BASE_URL + '/api/v1/auth/register/buyer';
           
         const body = isSeller ? {
           email,
@@ -217,7 +245,7 @@ export const api = {
           body: JSON.stringify(body)
         });
 
-        const result = await response.json();
+        const result = await safeJson(response);
         
         if (!response.ok) {
           // Tangani kemungkinan error array dari Spring Validation
@@ -246,11 +274,11 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch('http://localhost:8080/api/v1/admin/sellers/pending', {
+          const response = await fetch(API_BASE_URL + '/api/v1/admin/sellers/pending', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
-            const result = await response.json();
+            const result = await safeJson(response);
             const items = result.data?.content || result.data || [];
             return { success: true, data: items };
           }
@@ -337,11 +365,11 @@ export const api = {
     approveSeller: async (sellerId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
-        const response = await fetch(`http://localhost:8080/api/v1/admin/sellers/${sellerId}/approve`, {
+        const response = await fetch(`${API_BASE_URL}/api/v1/admin/sellers/${sellerId}/approve`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        const result = await response.json();
+        const result = await safeJson(response);
         if (!response.ok) {
           throw new Error(result.message || 'Gagal menyetujui penjual.');
         }
@@ -353,11 +381,11 @@ export const api = {
     rejectSeller: async (sellerId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
-        const response = await fetch(`http://localhost:8080/api/v1/admin/sellers/${sellerId}/reject`, {
+        const response = await fetch(`${API_BASE_URL}/api/v1/admin/sellers/${sellerId}/reject`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        const result = await response.json();
+        const result = await safeJson(response);
         if (!response.ok) {
           throw new Error(result.message || 'Gagal menolak penjual.');
         }
@@ -373,7 +401,7 @@ export const api = {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        const result = await response.json();
+        const result = await safeJson(response);
         if (!response.ok) {
           throw new Error(result.message || 'Gagal mengubah status penjual.');
         }
@@ -389,7 +417,7 @@ export const api = {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        const result = await response.json();
+        const result = await safeJson(response);
         if (!response.ok) {
           throw new Error(result.message || 'Gagal menghapus penjual.');
         }
@@ -402,11 +430,11 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch('http://localhost:8080/api/v1/admin/dashboard', {
+          const response = await fetch(API_BASE_URL + '/api/v1/admin/dashboard', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
-            const result = await response.json();
+            const result = await safeJson(response);
             const d = result.data || {};
             return {
               success: true,
@@ -450,13 +478,13 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch('http://localhost:8080/api/v1/seller/products', {
+          const response = await fetch(API_BASE_URL + '/api/v1/seller/products', {
             headers: {
               'Authorization': `Bearer ${token}`
             }
           });
           if (response.ok) {
-            const result = await response.json();
+            const result = await safeJson(response);
             const items = result.data?.content || result.data || [];
             const mapped = items.map(p => ({
               id: p.id,
@@ -598,7 +626,7 @@ export const api = {
             status: productData.status === 'nonaktif' ? 'INACTIVE' : 'ACTIVE'
           };
 
-          const response = await fetch(`http://localhost:8080/api/v1/seller/products/${productId}`, {
+          const response = await fetch(`${API_BASE_URL}/api/v1/seller/products/${productId}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -608,7 +636,7 @@ export const api = {
           });
 
           if (response.ok) {
-            const result = await response.json();
+            const result = await safeJson(response);
             const p = result.data;
             const updatedProduct = {
               id: p.id,
@@ -651,7 +679,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch(`http://localhost:8080/api/v1/seller/products/${productId}`, {
+          const response = await fetch(`${API_BASE_URL}/api/v1/seller/products/${productId}`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${token}`
@@ -685,7 +713,7 @@ export const api = {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
-            const result = await response.json();
+            const result = await safeJson(response);
             const items = result.data?.content || result.data || [];
             
             const mapped = await Promise.all(items.map(async (o) => {
@@ -705,7 +733,7 @@ export const api = {
                     headers: { 'Authorization': `Bearer ${token}` }
                   });
                   if (payRes.ok) {
-                    const payData = await payRes.json();
+                    const payData = await safeJson(payRes);
                     if (payData.data?.status === 'PROOF_SUBMITTED') {
                       orderStatus = 'proof_submitted';
                       proofUrl = payData.data.paymentProofUrl;
@@ -763,7 +791,7 @@ export const api = {
           },
           body: JSON.stringify({ status: backendStatus })
         });
-        const result = await response.json();
+        const result = await safeJson(response);
         if (!response.ok) {
           throw new Error(result.message || 'Gagal memperbarui status pesanan.');
         }
@@ -783,7 +811,7 @@ export const api = {
           },
           body: JSON.stringify({ action: 'APPROVE', note: 'Pembayaran manual disetujui penjual.' })
         });
-        const result = await response.json();
+        const result = await safeJson(response);
         if (!response.ok) {
           throw new Error(result.message || 'Gagal mengonfirmasi pembayaran manual.');
         }
@@ -848,13 +876,13 @@ export const api = {
   buyer: {
     getProducts: async ({ search = '' } = {}) => {
       try {
-        let url = 'http://localhost:8080/api/v1/products';
+        let url = API_BASE_URL + '/api/v1/products';
         if (search) {
           url += `?keyword=${encodeURIComponent(search)}`;
         }
         const response = await fetch(url);
         if (response.ok) {
-          const result = await response.json();
+          const result = await safeJson(response);
           const items = result.data?.content || result.data || [];
           let mapped = items.map(p => ({
             id: p.id,
@@ -882,9 +910,9 @@ export const api = {
 
     getProductDetail: async (productId) => {
       try {
-        const response = await fetch(`http://localhost:8080/api/v1/products/${productId}`);
+        const response = await fetch(`${API_BASE_URL}/api/v1/products/${productId}`);
         if (response.ok) {
-          const result = await response.json();
+          const result = await safeJson(response);
           const p = result.data;
           if (p) {
             return {
@@ -920,14 +948,14 @@ export const api = {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Gagal mengambil keranjang');
-      const result = await response.json();
+      const result = await safeJson(response);
       const cartItems = result.data?.items || [];
       
       const mappedItems = await Promise.all(cartItems.map(async (item) => {
         try {
           const prodRes = await fetch(`http://localhost:8080/api/v1/products/${item.productId}`);
           if (prodRes.ok) {
-            const prodData = await prodRes.json();
+            const prodData = await safeJson(prodRes);
             const product = prodData.data;
             return {
               id: item.id,
@@ -970,7 +998,7 @@ export const api = {
         },
         body: JSON.stringify({ productId, quantity: qty })
       });
-      const result = await response.json();
+      const result = await safeJson(response);
       if (!response.ok) {
         throw new Error(result.message || 'Gagal menambahkan ke keranjang');
       }
@@ -994,7 +1022,7 @@ export const api = {
         },
         body: JSON.stringify({ quantity: qty })
       });
-      const result = await response.json();
+      const result = await safeJson(response);
       if (!response.ok) {
         throw new Error(result.message || 'Gagal mengubah kuantitas.');
       }
@@ -1017,7 +1045,7 @@ export const api = {
         }
       });
       if (!response.ok) {
-        const result = await response.json();
+        const result = await safeJson(response);
         throw new Error(result.message || 'Gagal menghapus item.');
       }
       return { success: true, message: 'Item dihapus dari keranjang.' };
@@ -1045,7 +1073,7 @@ export const api = {
           notes: `Metode Pembayaran: ${paymentMethod}`
         })
       });
-      const result = await response.json();
+      const result = await safeJson(response);
       if (!response.ok) {
         throw new Error(result.message || 'Checkout gagal.');
       }
@@ -1065,7 +1093,7 @@ export const api = {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
-            const result = await response.json();
+            const result = await safeJson(response);
             const items = result.data?.content || result.data || [];
             
             const mapped = await Promise.all(items.map(async (o) => {
@@ -1085,7 +1113,7 @@ export const api = {
                     headers: { 'Authorization': `Bearer ${token}` }
                   });
                   if (payRes.ok) {
-                    const payData = await payRes.json();
+                    const payData = await safeJson(payRes);
                     if (payData.data?.status === 'PROOF_SUBMITTED') {
                       orderStatus = 'proof_submitted';
                       proofUrl = payData.data.paymentProofUrl;
@@ -1136,7 +1164,7 @@ export const api = {
         },
         body: JSON.stringify({ proofDataUrl })
       });
-      const result = await response.json();
+      const result = await safeJson(response);
       if (!response.ok) {
         throw new Error(result.message || 'Gagal mengunggah bukti pembayaran.');
       }
@@ -1153,7 +1181,7 @@ export const api = {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
-          const result = await response.json();
+          const result = await safeJson(response);
           const items = result.data?.content || result.data || [];
           
           const mapped = items.map(c => ({
@@ -1181,7 +1209,7 @@ export const api = {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
-          const result = await response.json();
+          const result = await safeJson(response);
           const items = result.data?.content || result.data || [];
           const mapped = items.map(msg => ({
             id: msg.id,
@@ -1216,7 +1244,7 @@ export const api = {
         },
         body: JSON.stringify(payload)
       });
-      const result = await response.json();
+      const result = await safeJson(response);
       if (!response.ok) {
         throw new Error(result.message || 'Gagal mengirim pesan.');
       }
@@ -1245,7 +1273,7 @@ export const api = {
         },
         body: JSON.stringify({ sellerId })
       });
-      const result = await response.json();
+      const result = await safeJson(response);
       if (!response.ok) {
         throw new Error(result.message || 'Gagal membuat obrolan baru.');
       }
