@@ -218,9 +218,9 @@ export const Login = () => {
 
   const setDemoCredentials = (role) => {
     setError('');
-    if (role === 'admin') { setEmailOrUser('admin'); setPassword('admin123'); }
-    else if (role === 'seller') { setEmailOrUser('seller'); setPassword('seller123'); }
-    else { setEmailOrUser('buyer'); setPassword('buyer123'); }
+    if (role === 'admin') { setEmailOrUser('admin@ecommerce.com'); setPassword('admin123'); }
+    else if (role === 'seller') { setEmailOrUser('penjual@gmail.com'); setPassword('seller123'); }
+    else { setEmailOrUser('pembeli@gmail.com'); setPassword('buyer123'); }
   };
 
   // =====================================================================
@@ -409,7 +409,7 @@ export const Login = () => {
                 <button type="button" className="btn-small" onClick={() => setDemoCredentials('buyer')}>Pembeli</button>
               </div>
               <div className="credentials-list" style={{ marginTop: '0.5rem' }}>
-                <div className="credentials-item">Usernames: <span>admin</span> | <span>seller</span> | <span>buyer</span></div>
+                <div className="credentials-item">Email: <span>admin@ecommerce.com</span> | <span>penjual@gmail.com</span> | <span>pembeli@gmail.com</span></div>
                 <div className="credentials-item">Password: <span>admin123</span> | <span>seller123</span> | <span>buyer123</span></div>
               </div>
             </div>

@@ -21,7 +21,7 @@ public class AuthController {
             @Valid @RequestBody RegisterBuyerRequest request) {
         AuthResponse response = authService.registerBuyer(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Buyer registered successfully", response));
+                .body(ApiResponse.success("Akun Pembeli berhasil registrasi", response));
     }
 
     @PostMapping("/register/seller")
@@ -29,14 +29,14 @@ public class AuthController {
             @Valid @RequestBody RegisterSellerRequest request) {
         AuthResponse response = authService.registerSeller(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Seller registered successfully. Awaiting admin approval.", response));
+                .body(ApiResponse.success("Akun Penjual berhasil didaftarkan.", response));
     }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success("Login successful", response));
+        return ResponseEntity.ok(ApiResponse.success("Login berhasil", response));
     }
 
     // endpoint untuk login user menggunakan google OAuth
@@ -63,13 +63,13 @@ public class AuthController {
             @Valid @RequestBody GoogleRegisterSellerRequest request) {
         AuthResponse response = authService.registerGoogleSeller(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Registrasi akun penjual berhasil, menunggu verifiikasi admin", response));
+                .body(ApiResponse.success("Registrasi akun penjual berhasil.", response));
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
             @Valid @RequestBody RefreshTokenRequest request) {
         AuthResponse response = authService.refreshToken(request);
-        return ResponseEntity.ok(ApiResponse.success("Token refreshed", response));
+        return ResponseEntity.ok(ApiResponse.success("Token diperbarui", response));
     }
 }

@@ -36,6 +36,10 @@ cors:
 google:
   client-id: ${GOOGLE_CLIENT_ID:}
   client-secret: ${GOOGLE_CLIENT_SECRET:}
+  recaptcha:
+    site-key: ${RECAPTCHA_SITE_KEY:6LeIxAcTAAAAABp30egCoDu2i1fg_88Gg5_q9mCH}
+    secret: ${RECAPTCHA_SECRET:${RECAPTCHA_SECRET_KEY:6LeIxAcTAAAAAGG-vFI1TnFTxWGRtBpa3Wgahody}}
+    enabled: ${RECAPTCHA_ENABLED:true}
 
 # konfigurasi google recaptcha
 recaptcha:

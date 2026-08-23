@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { 
   useAdminDashboardStatsQuery, 
   useAdminSellersQuery,
+  useAdminBuyersQuery,
   useAdminApproveSellerMutation,
   useAdminRejectSellerMutation,
   useAdminToggleSellerStatusMutation,
@@ -14,18 +15,18 @@ import { DataTable } from '../../components/shared/DataTable';
 import {
   Store, 
   Users, 
-  ShoppingBag, 
-  TrendingUp, 
   Trash2, 
   UserCheck, 
   UserMinus,
   MoreVertical,
-  Plus
+  Plus,
+  X
 } from 'lucide-react';
 
 export const AdminDashboardPage = () => {
   const { data: statsRes, isLoading: isStatsLoading } = useAdminDashboardStatsQuery();
   const { data: sellersRes, isLoading: isSellersLoading } = useAdminSellersQuery();
+  const { data: buyersRes, isLoading: isBuyersLoading } = useAdminBuyersQuery();
   
   const approveSellerMutation = useAdminApproveSellerMutation();
   const rejectSellerMutation = useAdminRejectSellerMutation();
@@ -42,7 +43,6 @@ export const AdminDashboardPage = () => {
   const [sellerPhoneNumber, setSellerPhoneNumber] = useState('');
   const [sellerPassword, setSellerPassword] = useState('');
   const [storeName, setStoreName] = useState('');
-  const [storeCategory, setStoreCategory] = useState('Fashion & Batik');
 
   const stats = statsRes?.data || {
     totalSellers: 0,
@@ -54,6 +54,7 @@ export const AdminDashboardPage = () => {
   };
 
   const sellers = sellersRes?.data || [];
+  const buyers = buyersRes?.data || [];
 
   const handleAddSellerSubmit = (e) => {
     e.preventDefault();
@@ -71,11 +72,9 @@ export const AdminDashboardPage = () => {
       phoneNumber: sellerPhoneNumber,
       password: sellerPassword,
       role: 'seller',
-      storeName,
-      category: storeCategory
+      storeName
     }, {
       onSuccess: () => {
-        // Automatically approve seller added directly by admin for convenience
         const dbSellers = JSON.parse(sessionStorage.getItem('ecom_sellers') || '[]');
         const addedSeller = dbSellers.find(s => s.storeName === storeName);
         if (addedSeller) {
@@ -101,10 +100,12 @@ export const AdminDashboardPage = () => {
   };
 
   const getInitials = (name) => {
+    if (!name) return 'US';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   const getRandomColor = (id) => {
+    if (!id) return '#EB5E28';
     const colors = ['#EB5E28', '#3E5C76', '#1D2D44', '#ADC178', '#9B5DE5', '#F15BB5', '#00F5D4', '#00BBF9'];
     const index = id.charCodeAt(id.length - 1) % colors.length;
     return colors[index];
@@ -131,11 +132,6 @@ export const AdminDashboardPage = () => {
       )
     },
     {
-      header: 'Kategori',
-      accessor: 'category',
-      sortable: true
-    },
-    {
       header: 'Produk',
       accessor: 'productsCount',
       sortable: true,
@@ -148,17 +144,6 @@ export const AdminDashboardPage = () => {
       render: (row) => <span className="cell-bold">{row.ordersCount} pesanan</span>
     },
     {
-      header: 'Status',
-      accessor: 'status',
-      sortable: true,
-      render: (row) => (
-        <span className={`status-pill ${row.status}`}>
-          <span className="status-pill-dot"></span>
-          <span>{row.status === 'aktif' ? 'Aktif' : row.status === 'menunggu' ? 'Menunggu' : 'Nonaktif'}</span>
-        </span>
-      )
-    },
-    {
       header: 'Aksi',
       accessor: 'id',
       render: (row) => (
@@ -167,13 +152,13 @@ export const AdminDashboardPage = () => {
             className="icon-btn" 
             onClick={(e) => {
               e.stopPropagation();
-              setActiveDropdown(activeDropdown === row.id ? null : row.id);
+              setActiveDropdown(activeDropdown === `seller-${row.id}` ? null : `seller-${row.id}`);
             }}
           >
             <MoreVertical size={16} />
           </button>
           
-          {activeDropdown === row.id && (
+          {activeDropdown === `seller-${row.id}` && (
             <div className="actions-dropdown" onMouseLeave={() => setActiveDropdown(null)}>
               {row.status === 'menunggu' && (
                 <>
@@ -234,72 +219,114 @@ export const AdminDashboardPage = () => {
     }
   ];
 
-  if (isStatsLoading || isSellersLoading) {
+  const buyerColumns = [
+    {
+      header: 'Pembeli',
+      accessor: 'fullName',
+      sortable: true,
+      render: (row) => (
+        <div className="table-avatar-cell">
+          <div 
+            className="table-avatar" 
+            style={{ backgroundColor: getRandomColor(row.id) }}
+          >
+            {getInitials(row.fullName)}
+          </div>
+          <div>
+            <span className="cell-bold">{row.fullName}</span>
+            <span className="cell-sub">{row.email}</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      header: 'Email',
+      accessor: 'email',
+      sortable: true,
+      render: (row) => <span className="cell-bold">{row.email}</span>
+    },
+    {
+      header: 'Nomor Handphone',
+      accessor: 'phone',
+      sortable: true,
+      render: (row) => <span>{row.phone || '-'}</span>
+    },
+    {
+      header: 'Aksi',
+      accessor: 'id',
+      render: (row) => (
+        <div className="actions-dropdown-wrapper">
+          <button 
+            className="icon-btn" 
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveDropdown(activeDropdown === `buyer-${row.id}` ? null : `buyer-${row.id}`);
+            }}
+          >
+            <MoreVertical size={16} />
+          </button>
+          
+          {activeDropdown === `buyer-${row.id}` && (
+            <div className="actions-dropdown" onMouseLeave={() => setActiveDropdown(null)}>
+              <button 
+                className="dropdown-item" 
+                onClick={() => {
+                  toggleSellerMutation.mutate(row.id);
+                  setActiveDropdown(null);
+                }}
+              >
+                {row.status === 'aktif' ? (
+                  <>
+                    <UserMinus size={14} style={{ color: 'var(--danger)' }} /> Nonaktifkan
+                  </>
+                ) : (
+                  <>
+                    <UserCheck size={14} style={{ color: 'var(--success)' }} /> Aktifkan
+                  </>
+                )}
+              </button>
+              <button 
+                className="dropdown-item danger" 
+                onClick={() => {
+                  if (confirm(`Hapus pembeli ${row.fullName}?`)) {
+                    deleteSellerMutation.mutate(row.id);
+                  }
+                  setActiveDropdown(null);
+                }}
+              >
+                <Trash2 size={14} /> Hapus Pembeli
+              </button>
+            </div>
+          )}
+        </div>
+      )
+    }
+  ];
+
+  if (isStatsLoading || isSellersLoading || isBuyersLoading) {
     return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--neutral-500)' }}>Memuat data Dashboard Admin...</div>;
   }
 
-  // Monthly revenue trend (March to August 2026)
-  const revenueChartData = [24000000, 29000000, 35000000, 38900000, 42000000, stats.monthlyRevenue || 48300000];
-  const revenueChartLabels = ['Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu'];
-
   return (
     <div onClick={() => setActiveDropdown(null)}>
-      {/* Stat Cards */}
-      <div className="stats-grid">
+      {/* Stat Cards: HANYA Total Penjual & Total Pembeli */}
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
         <StatCard 
           label="Total Penjual" 
-          value={stats.totalSellers} 
+          value={sellers.length || stats.totalSellers} 
           icon={Store} 
-          caption={`${stats.activeSellers} aktif`} 
+          caption={`${sellers.filter(s => s.status === 'aktif').length || stats.activeSellers} aktif`} 
         />
         <StatCard 
           label="Total Pembeli" 
-          value={stats.totalBuyers} 
+          value={buyers.length || stats.totalBuyers} 
           icon={Users} 
           caption="Total pembeli terdaftar" 
         />
-        <StatCard 
-          label="Total Pesanan" 
-          value={stats.totalOrders} 
-          icon={ShoppingBag} 
-          caption="Semua waktu platform" 
-        />
-        <StatCard 
-          label="Revenue Bulan Ini" 
-          value={formatCurrency(stats.monthlyRevenue)} 
-          icon={TrendingUp} 
-          caption="Agustus 2026" 
-        />
-      </div>
-
-      {/* Analytics split: Line Chart & Donut Chart */}
-      <div className="dashboard-split">
-        <div className="card-section">
-          <div className="card-header-flex">
-            <div className="card-title-block">
-              <h3>Revenue Platform</h3>
-              <p>Tren pendapatan 6 bulan terakhir</p>
-            </div>
-
-          </div>
-          <TrendChart data={revenueChartData} labels={revenueChartLabels} height={220} />
-        </div>
-
-        <div className="card-section">
-          <div className="card-header-flex">
-            <div className="card-title-block">
-              <h3>Status Pesanan</h3>
-              <p>Distribusi saat ini</p>
-            </div>
-          </div>
-          <div style={{ marginTop: '1rem' }}>
-            <DonutChart data={stats.ordersDistribution} />
-          </div>
-        </div>
       </div>
 
       {/* Seller Management Section */}
-      <div className="card-section">
+      <div className="card-section" style={{ marginTop: '1.5rem' }}>
         <div className="card-header-flex">
           <div className="card-title-block">
             <h3>Manajemen Penjual</h3>
@@ -318,6 +345,25 @@ export const AdminDashboardPage = () => {
           data={sellers}
           searchKey="storeName"
           searchPlaceholder="Cari nama toko penjual..."
+          initialPageSize={25}
+        />
+      </div>
+
+      {/* Buyer Management Section */}
+      <div className="card-section" style={{ marginTop: '1.5rem' }}>
+        <div className="card-header-flex">
+          <div className="card-title-block">
+            <h3>Manajemen Pembeli</h3>
+            <p>{buyers.length} pembeli terdaftar di platform</p>
+          </div>
+        </div>
+
+        <DataTable
+          columns={buyerColumns}
+          data={buyers}
+          searchKey="fullName"
+          searchPlaceholder="Cari nama atau email pembeli..."
+          initialPageSize={25}
         />
       </div>
 
@@ -335,10 +381,10 @@ export const AdminDashboardPage = () => {
             <form onSubmit={handleAddSellerSubmit}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label>Nama Pemilik</label>
+                  <label>Nama Lengkap</label>
                   <input 
                     type="text" 
-                    placeholder="Contoh: Budi Santoso"
+                    placeholder="Masukkan nama lengkap..."
                     value={sellerName}
                     onChange={(e) => setSellerName(e.target.value)}
                     required 
@@ -350,7 +396,7 @@ export const AdminDashboardPage = () => {
                     <label>Email</label>
                     <input 
                       type="email" 
-                      placeholder="budi@example.com"
+                      placeholder="name@example.com"
                       value={sellerEmail}
                       onChange={(e) => setSellerEmail(e.target.value)}
                       required 
@@ -375,7 +421,7 @@ export const AdminDashboardPage = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Password Akun</label>
+                  <label>Password</label>
                   <input 
                     type="password" 
                     placeholder="Buat password..."
@@ -385,31 +431,15 @@ export const AdminDashboardPage = () => {
                   />
                 </div>
 
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Nama Toko</label>
-                    <input 
-                      type="text" 
-                      placeholder="Contoh: Elektronik Jaya"
-                      value={storeName}
-                      onChange={(e) => setStoreName(e.target.value)}
-                      required 
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Kategori Utama</label>
-                    <select
-                      value={storeCategory}
-                      onChange={(e) => setStoreCategory(e.target.value)}
-                      required
-                    >
-                      <option value="Fashion & Batik">Fashion & Batik</option>
-                      <option value="Sepatu & Aksesori">Sepatu & Aksesori</option>
-                      <option value="Tas & Dompet">Tas & Dompet</option>
-                      <option value="Elektronik">Elektronik</option>
-                      <option value="Kecantikan">Kecantikan</option>
-                    </select>
-                  </div>
+                <div className="form-group">
+                  <label>Nama Toko</label>
+                  <input 
+                    type="text" 
+                    placeholder="Nama toko Anda..."
+                    value={storeName}
+                    onChange={(e) => setStoreName(e.target.value)}
+                    required 
+                  />
                 </div>
               </div>
 

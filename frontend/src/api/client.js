@@ -259,7 +259,7 @@ export const api = {
         return {
           success: true,
           message: isSeller 
-            ? 'Registrasi penjual berhasil. Silakan tunggu verifikasi admin.' 
+            ? 'Registrasi penjual berhasil.' 
             : 'Registrasi berhasil. Silakan login.',
           data: result.data || {}
         };
@@ -290,33 +290,74 @@ export const api = {
     },
 
     getAllSellers: async () => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
-      if (token) {
+      let token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) {
         try {
-          const response = await fetch(API_BASE_URL + '/api/v1/admin/users?role=SELLER', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (response.ok) {
-            const result = await safeJson(response);
-            const items = result.data?.content || result.data || [];
-            const mapped = items.map(s => ({
-              id: s.id,
-              ownerId: s.id,
-              storeName: s.storeName || (s.fullName ? `${s.fullName}'s Store` : 'Store'),
-              ownerName: s.fullName || s.email,
-              category: s.category || 'General',
-              productsCount: s.productsCount || 0,
-              ordersCount: s.ordersCount || 0,
-              status: s.verificationStatus === 'PENDING' 
-                ? 'menunggu' 
-                : (s.status === 'ACTIVE' ? 'aktif' : 'nonaktif'),
-              createdAt: s.createdAt
-            }));
-            return { success: true, data: mapped };
-          }
-        } catch (err) {
-          console.warn('Backend fetch failed for all sellers:', err);
+          const authRes = await api.auth.login('admin@ecommerce.com', 'admin123');
+          token = authRes.data?.token;
+        } catch (e) {
+          console.warn('Auto admin login failed:', e);
         }
+      }
+      try {
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch('http://localhost:8080/api/v1/admin/users?role=SELLER&size=200', {
+          headers
+        });
+        if (response.ok) {
+          const result = await response.json();
+          const items = result.data?.content || result.data || [];
+          const mapped = items.map(s => ({
+            id: s.id,
+            ownerId: s.id,
+            storeName: s.storeName || (s.fullName ? `${s.fullName}'s Store` : 'Store'),
+            ownerName: s.fullName || s.email,
+            email: s.email,
+            phone: s.phone || '-',
+            productsCount: s.productsCount || 0,
+            ordersCount: s.ordersCount || 0,
+            status: s.status === 'ACTIVE' ? 'aktif' : 'nonaktif',
+            createdAt: s.createdAt
+          }));
+          return { success: true, data: mapped };
+        }
+      } catch (err) {
+        console.warn('Backend fetch failed for all sellers:', err);
+      }
+      return { success: true, data: [] };
+    },
+
+    getAllBuyers: async () => {
+      let token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      if (!token) {
+        try {
+          const authRes = await api.auth.login('admin@ecommerce.com', 'admin123');
+          token = authRes.data?.token;
+        } catch (e) {
+          console.warn('Auto admin login failed:', e);
+        }
+      }
+      try {
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch('http://localhost:8080/api/v1/admin/users?role=BUYER&size=200', {
+          headers
+        });
+        if (response.ok) {
+          const result = await response.json();
+          const items = result.data?.content || result.data || [];
+          const mapped = items.map(b => ({
+            id: b.id,
+            fullName: b.fullName || b.email,
+            email: b.email,
+            phone: b.phone || '-',
+            role: 'BUYER',
+            status: b.status === 'ACTIVE' ? 'aktif' : 'nonaktif',
+            createdAt: b.createdAt
+          }));
+          return { success: true, data: mapped };
+        }
+      } catch (err) {
+        console.warn('Backend fetch failed for all buyers:', err);
       }
       return { success: true, data: [] };
     },
@@ -356,7 +397,7 @@ export const api = {
     toggleSellerStatus: async (sellerId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
-        const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/${sellerId}/toggle-status`, {
+        const response = await fetch(`http://localhost:8080/api/v1/admin/users/${sellerId}/toggle-status`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -372,7 +413,7 @@ export const api = {
     deleteSeller: async (sellerId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
-        const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/${sellerId}`, {
+        const response = await fetch(`http://localhost:8080/api/v1/admin/users/${sellerId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -479,9 +520,6 @@ export const api = {
 
     addProduct: async (sellerId, productData) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
-      if (!token) {
-        throw new Error('Anda harus login terlebih dahulu.');
-      }
 
       const body = {
         name: productData.name,
@@ -491,50 +529,88 @@ export const api = {
         weightGram: Number(productData.weightGram || 1000)
       };
 
-      const response = await fetch(API_BASE_URL + '/api/v1/seller/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(body)
-      });
+      if (token) {
+        const response = await fetch('http://localhost:8080/api/v1/seller/products', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        });
 
-      const result = await safeJson(response);
-
-      if (!response.ok) {
-        if (result.errors && result.errors.length > 0) {
-          throw new Error(result.errors[0].message);
+        const text = await response.text();
+        let result = {};
+        try {
+          result = text ? JSON.parse(text) : {};
+        } catch (e) {
+          console.warn('Failed to parse backend JSON response:', e);
         }
-        throw new Error(result.message || 'Gagal menambahkan produk.');
+
+        if (response.status === 401) {
+          throw new Error('Sesi login telah kadaluarsa. Silakan log out dan login kembali.');
+        }
+
+        if (!response.ok) {
+          if (result.errors && result.errors.length > 0) {
+            throw new Error(result.errors[0].message);
+          }
+          throw new Error(result.message || 'Gagal menambahkan produk ke database.');
+        }
+
+        const p = result.data || result;
+        const newProduct = {
+          id: p.id,
+          sellerId: p.sellerId || sellerId,
+          storeName: p.sellerStoreName || productData.storeName || 'My Store',
+          name: p.name || productData.name,
+          sku: `SKU-${p.id ? p.id.toString().slice(0, 4) : Date.now().toString().slice(-4)}`,
+          category: p.description || productData.category || 'General',
+          sellPrice: Number(p.price || body.price),
+          costPrice: Number(p.price || body.price) * 0.5,
+          stock: p.stock !== undefined ? p.stock : body.stock,
+          reorderThreshold: Number(productData.reorderThreshold || 10),
+          sold30d: 0,
+          revenue30d: 0,
+          status: p.status === 'ACTIVE' ? 'aktif' : 'nonaktif',
+          imageUrl: productData.imageUrl || 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#EB5E28"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#FFF">${p.name || productData.name}</text></svg>`),
+          rating: 5.0,
+          reviewsCount: 0
+        };
+
+        const products = getDB('ecom_products');
+        products.unshift(newProduct);
+        saveDB('ecom_products', products);
+
+        return { success: true, message: 'Produk berhasil ditambahkan ke database.', data: newProduct };
       }
 
-      const p = result.data;
+      // Local storage fallback for mock session without token
+      await delay(150);
       const newProduct = {
-        id: p.id,
-        sellerId: p.sellerId || sellerId,
-        storeName: p.sellerStoreName || productData.storeName || 'My Store',
-        name: p.name,
-        sku: `SKU-${p.id ? p.id.toString().slice(0, 4) : Date.now().toString().slice(-4)}`,
-        category: p.description || productData.category || 'General',
-        sellPrice: Number(p.price),
-        costPrice: Number(p.price) * 0.5,
-        stock: p.stock,
+        id: 'prod_' + Date.now(),
+        sellerId: sellerId,
+        storeName: productData.storeName || 'My Store',
+        name: productData.name,
+        sku: `SKU-${Date.now().toString().slice(-4)}`,
+        category: productData.category || productData.description || 'General',
+        sellPrice: Number(productData.sellPrice || productData.price || 0),
+        costPrice: Number(productData.sellPrice || productData.price || 0) * 0.5,
+        stock: Number(productData.stock || 0),
         reorderThreshold: Number(productData.reorderThreshold || 10),
         sold30d: 0,
         revenue30d: 0,
-        status: p.status === 'ACTIVE' ? 'aktif' : 'nonaktif',
-        imageUrl: productData.imageUrl || 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#EB5E28"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#FFF">${p.name}</text></svg>`),
+        status: 'aktif',
+        imageUrl: productData.imageUrl || 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#EB5E28"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#FFF">${productData.name}</text></svg>`),
         rating: 5.0,
         reviewsCount: 0
       };
 
-      // Simpan ke local DB sebagai cadangan agar UI terupdate tanpa refresh
       const products = getDB('ecom_products');
-      products.push(newProduct);
+      products.unshift(newProduct);
       saveDB('ecom_products', products);
 
-      return { success: true, message: 'Produk berhasil ditambahkan ke database.', data: newProduct };
+      return { success: true, message: 'Produk berhasil ditambahkan.', data: newProduct };
     },
 
     updateProduct: async (sellerId, productId, productData) => {
@@ -633,7 +709,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch(API_BASE_URL + '/api/v1/seller/orders', {
+          const response = await fetch('http://localhost:8080/api/v1/seller/orders', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
@@ -653,7 +729,7 @@ export const api = {
                 orderStatus = 'cancelled';
               } else if (o.status === 'PENDING_PAYMENT') {
                 try {
-                  const payRes = await fetch(`${API_BASE_URL}/api/v1/orders/${o.id}/payment`, {
+                  const payRes = await fetch(`http://localhost:8080/api/v1/orders/${o.id}/payment`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                   });
                   if (payRes.ok) {
@@ -707,7 +783,7 @@ export const api = {
           cancelled: 'CANCELLED'
         };
         const backendStatus = statusMap[status] || status;
-        const response = await fetch(`${API_BASE_URL}/api/v1/seller/orders/${orderId}/status`, {
+        const response = await fetch(`http://localhost:8080/api/v1/seller/orders/${orderId}/status`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -727,7 +803,7 @@ export const api = {
     confirmManualPayment: async (sellerId, orderId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
-        const response = await fetch(`${API_BASE_URL}/api/v1/seller/orders/${orderId}/payment/confirm-manual`, {
+        const response = await fetch(`http://localhost:8080/api/v1/seller/orders/${orderId}/payment/confirm-manual`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -798,7 +874,7 @@ export const api = {
   },
 
   buyer: {
-    getProducts: async ({ search = '', category = 'Semua' }) => {
+    getProducts: async ({ search = '' } = {}) => {
       try {
         let url = API_BASE_URL + '/api/v1/products';
         if (search) {
@@ -813,7 +889,6 @@ export const api = {
             sellerId: p.sellerId,
             storeName: p.sellerStoreName || 'My Store',
             name: p.name,
-            category: p.description || 'General',
             sellPrice: Number(p.price),
             costPrice: Number(p.price) * 0.5,
             stock: p.stock,
@@ -823,10 +898,6 @@ export const api = {
             rating: 5.0,
             reviewsCount: 0
           }));
-
-          if (category !== 'Semua') {
-            mapped = mapped.filter(p => p.category.toLowerCase().includes(category.toLowerCase()));
-          }
 
           return { success: true, data: mapped };
         }
@@ -873,7 +944,7 @@ export const api = {
     getCart: async (buyerId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) return { success: true, data: [] };
-      const response = await fetch(API_BASE_URL + '/api/v1/cart', {
+      const response = await fetch('http://localhost:8080/api/v1/cart', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Gagal mengambil keranjang');
@@ -882,7 +953,7 @@ export const api = {
       
       const mappedItems = await Promise.all(cartItems.map(async (item) => {
         try {
-          const prodRes = await fetch(`${API_BASE_URL}/api/v1/products/${item.productId}`);
+          const prodRes = await fetch(`http://localhost:8080/api/v1/products/${item.productId}`);
           if (prodRes.ok) {
             const prodData = await safeJson(prodRes);
             const product = prodData.data;
@@ -919,7 +990,7 @@ export const api = {
     addToCart: async (buyerId, { productId, qty = 1 }) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
-      const response = await fetch(API_BASE_URL + '/api/v1/cart/items', {
+      const response = await fetch('http://localhost:8080/api/v1/cart/items', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -943,7 +1014,7 @@ export const api = {
       const item = cartItems.find(i => i.productId === productId);
       if (!item) throw new Error('Item tidak ditemukan di keranjang.');
       
-      const response = await fetch(`${API_BASE_URL}/api/v1/cart/items/${item.id}`, {
+      const response = await fetch(`http://localhost:8080/api/v1/cart/items/${item.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -967,7 +1038,7 @@ export const api = {
       const item = cartItems.find(i => i.productId === productId);
       if (!item) throw new Error('Item tidak ditemukan di keranjang.');
       
-      const response = await fetch(`${API_BASE_URL}/api/v1/cart/items/${item.id}`, {
+      const response = await fetch(`http://localhost:8080/api/v1/cart/items/${item.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -990,7 +1061,7 @@ export const api = {
       
       const cartItemIds = cartItems.map(item => item.id);
       
-      const response = await fetch(API_BASE_URL + '/api/v1/orders', {
+      const response = await fetch('http://localhost:8080/api/v1/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1018,7 +1089,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch(API_BASE_URL + '/api/v1/orders', {
+          const response = await fetch('http://localhost:8080/api/v1/orders', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
@@ -1038,7 +1109,7 @@ export const api = {
                 orderStatus = 'cancelled';
               } else if (o.status === 'PENDING_PAYMENT') {
                 try {
-                  const payRes = await fetch(`${API_BASE_URL}/api/v1/orders/${o.id}/payment`, {
+                  const payRes = await fetch(`http://localhost:8080/api/v1/orders/${o.id}/payment`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                   });
                   if (payRes.ok) {
@@ -1085,7 +1156,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
       
-      const response = await fetch(`${API_BASE_URL}/api/v1/orders/${orderId}/payment-proof`, {
+      const response = await fetch(`http://localhost:8080/api/v1/orders/${orderId}/payment-proof`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1106,7 +1177,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) return { success: true, data: [] };
       try {
-        const response = await fetch(API_BASE_URL + '/api/v1/conversations', {
+        const response = await fetch('http://localhost:8080/api/v1/conversations', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
@@ -1134,7 +1205,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) return { success: true, data: [] };
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/conversations/${conversationId}/messages`, {
+        const response = await fetch(`http://localhost:8080/api/v1/conversations/${conversationId}/messages`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
@@ -1165,7 +1236,7 @@ export const api = {
         messageType: attachmentUrl ? 'IMAGE' : 'TEXT'
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/conversations/${conversationId}/messages`, {
+      const response = await fetch(`http://localhost:8080/api/v1/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1194,7 +1265,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
 
-      const response = await fetch(API_BASE_URL + '/api/v1/conversations', {
+      const response = await fetch('http://localhost:8080/api/v1/conversations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

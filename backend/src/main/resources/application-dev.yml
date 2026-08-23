@@ -28,6 +28,8 @@ logging:
 google:
   client-id: ${GOOGLE_CLIENT_ID:}
   client-secret: ${GOOGLE_CLIENT_SECRET:}
+  recaptcha:
+    enabled: false
 
 # konfigurasi recaptcha
 recaptcha:

@@ -35,12 +35,20 @@ export const useAdminSellersQuery = () => {
   });
 };
 
+export const useAdminBuyersQuery = () => {
+  return useQuery({
+    queryKey: ['admin', 'buyers', 'all'],
+    queryFn: api.admin.getAllBuyers,
+  });
+};
+
 export const useAdminApproveSellerMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (sellerId) => api.admin.approveSeller(sellerId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'buyers'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     },
   });
@@ -52,6 +60,7 @@ export const useAdminRejectSellerMutation = () => {
     mutationFn: (sellerId) => api.admin.rejectSeller(sellerId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'buyers'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     },
   });
@@ -63,6 +72,7 @@ export const useAdminToggleSellerStatusMutation = () => {
     mutationFn: (sellerId) => api.admin.toggleSellerStatus(sellerId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'buyers'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     },
   });
@@ -74,6 +84,7 @@ export const useAdminDeleteSellerMutation = () => {
     mutationFn: (sellerId) => api.admin.deleteSeller(sellerId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'buyers'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     },
   });

@@ -32,8 +32,20 @@ export const AdminLayout = () => {
     navigate('/login');
   };
 
-  const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['admin'] });
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await queryClient.refetchQueries();
+    } catch (err) {
+      console.warn('Failed to refresh data:', err);
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 600);
+    }
   };
 
   const getPageDetails = () => {
@@ -84,7 +96,7 @@ export const AdminLayout = () => {
             </div>
           </div>
 
-          <div style={{ marginTop: 'auto' }}>
+          {/* <div style={{ marginTop: 'auto' }}>
             <div className="nav-group-label">Preferensi</div>
             <div className="nav-links">
               <div className="nav-link-item">
@@ -94,7 +106,7 @@ export const AdminLayout = () => {
                 </span>
               </div>
             </div>
-          </div>
+          </div> */}
         </nav>
 
         <div className="sidebar-footer">
@@ -123,18 +135,28 @@ export const AdminLayout = () => {
           </div>
 
           <div className="header-actions">
-            <div className="header-status-indicator">
+            {/* <div className="header-status-indicator">
               <span className="status-dot active"></span>
               <span>Diperbarui {timeStr}</span>
-            </div>
+            </div> */}
 
             <div className="header-status-indicator">
               <Calendar size={14} />
               <span>{dateStr}</span>
             </div>
 
-            <button className="icon-btn" onClick={handleRefresh} title="Refresh Data">
-              <RefreshCw size={16} />
+            <button 
+              className={`icon-btn ${isRefreshing ? 'refreshing' : ''}`} 
+              onClick={handleRefresh} 
+              disabled={isRefreshing}
+              title="Refresh Data"
+              style={{
+                cursor: isRefreshing ? 'wait' : 'pointer',
+                opacity: isRefreshing ? 0.7 : 1,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <RefreshCw size={16} className={isRefreshing ? 'spin-icon' : ''} />
             </button>
           </div>
         </header>

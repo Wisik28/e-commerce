@@ -97,7 +97,7 @@ public class AuthService {
                 .fullName(request.getFullName())
                 .phone(request.getPhone())
                 .role(UserRole.SELLER)
-                .status(UserStatus.INACTIVE)
+                .status(UserStatus.ACTIVE)
                 .build();
 
         user = userRepository.save(user);
@@ -106,11 +106,11 @@ public class AuthService {
                 .user(user)
                 .storeName(request.getStoreName())
                 .storeDescription(request.getStoreDescription())
-                .verificationStatus(VerificationStatus.PENDING)
+                .verificationStatus(VerificationStatus.APPROVED)
                 .build();
 
         sellerProfileRepository.save(profile);
-        log.info("Seller registered (PENDING): {}", user.getEmail());
+        log.info("Seller registered (APPROVED): {}", user.getEmail());
 
         return generateAuthResponse(user);
     }
@@ -265,7 +265,7 @@ public class AuthService {
                 .fullName(userInfo.getName() != null ? userInfo.getName() : "Google User")
                 .phone(request.getPhone())
                 .role(UserRole.SELLER)
-                .status(UserStatus.INACTIVE)
+                .status(UserStatus.ACTIVE)
                 .build();
 
         user = userRepository.save(user);
@@ -274,11 +274,11 @@ public class AuthService {
                 .user(user)
                 .storeName(request.getStoreName())
                 .storeDescription(request.getStoreDescription())
-                .verificationStatus(VerificationStatus.PENDING)
+                .verificationStatus(VerificationStatus.APPROVED)
                 .build();
 
         sellerProfileRepository.save(profile);
-        log.info("Google Seller registered (PENDING): {}", user.getEmail());
+        log.info("Google Seller registered (APPROVED): {}", user.getEmail());
 
         return generateAuthResponse(user);
     }

@@ -70,16 +70,6 @@ export const SalesRevenueAnalyticsPage = () => {
     };
   }).sort((a, b) => b.value - a.value);
 
-  // Render dummy SVG bar chart for Revenue by Category
-  const categoryData = [
-    { name: 'Aksesori', value: 52200000 },
-    { name: 'Atasan Pria', value: 40470000 },
-    { name: 'Atasan Wanita', value: 49260000 },
-    { name: 'Sepatu', value: 53850000 },
-    { name: 'Outerwear', value: 24675000 }
-  ];
-  const maxCatValue = Math.max(...categoryData.map(c => c.value));
-
   // Columns for high value orders table
   const orderColumns = [
     { header: 'Order ID', accessor: 'id', sortable: true, render: (row) => <span className="cell-bold">{row.id}</span> },
@@ -98,17 +88,7 @@ export const SalesRevenueAnalyticsPage = () => {
     { header: 'Jumlah ↕', accessor: 'totalAmount', sortable: true, render: (row) => <span className="cell-bold">{formatCurrency(row.totalAmount)}</span> },
     { header: 'Margin ↕', accessor: 'marginPercentage', sortable: true, render: (row) => <span style={{ color: 'var(--success)', fontWeight: '700' }}>{row.marginPercentage}%</span> },
     { header: 'Metode', accessor: 'paymentMethod', render: (row) => <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '700', color: 'var(--neutral-500)' }}>{row.paymentMethod.replace('_', ' ')}</span> },
-    { header: 'Tanggal ↕', accessor: 'createdAt', sortable: true, render: (row) => new Date(row.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: '2-digit', year: 'numeric' }) },
-    {
-      header: 'Status',
-      accessor: 'status',
-      render: (row) => (
-        <span className={`status-pill ${row.status}`}>
-          <span className="status-pill-dot"></span>
-          <span>{row.status === 'terkirim' ? 'Terkirim' : row.status === 'dikirim' ? 'Dikirim' : row.status === 'diproses' ? 'Diproses' : 'Menunggu'}</span>
-        </span>
-      )
-    }
+    { header: 'Tanggal ↕', accessor: 'createdAt', sortable: true, render: (row) => new Date(row.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: '2-digit', year: 'numeric' }) }
   ];
 
   return (
@@ -201,35 +181,8 @@ export const SalesRevenueAnalyticsPage = () => {
         <TrendChart data={selectedTrend.data} labels={selectedTrend.labels} height={200} />
       </div>
 
-      {/* Row breakdown layout */}
-      <div className="dashboard-split">
-        {/* Revenue by Category (Horizontal progress chart) */}
-        <div className="card-section" style={{ marginBottom: 0 }}>
-          <div className="card-title-block" style={{ marginBottom: '1.25rem' }}>
-            <h3>Revenue per Kategori</h3>
-            <p>Agustus 2026</p>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {categoryData.map((cat, idx) => {
-              const pct = Math.round((cat.value / maxCatValue) * 100);
-              return (
-                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: '600' }}>
-                    <span style={{ color: 'var(--neutral-700)' }}>{cat.name}</span>
-                    <span style={{ color: 'var(--neutral-900)' }}>{formatCurrency(cat.value)}</span>
-                  </div>
-                  <div className="progress-bar-track" style={{ height: '6px' }}>
-                    <div className="progress-bar-fill" style={{ width: `${pct}%` }}></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Payment methods list */}
-        <div className="card-section" style={{ marginBottom: 0 }}>
+      {/* Payment methods list */}
+      <div className="card-section" style={{ marginTop: '1.5rem' }}>
           <div className="card-title-block" style={{ marginBottom: '1.25rem' }}>
             <h3>Metode Pembayaran</h3>
             <p>Distribusi revenue per metode pembayaran</p>

@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { useDebounce } from '../../hooks/useDebounce';
 
 export const DataTable = ({
   columns = [],
@@ -7,22 +8,24 @@ export const DataTable = ({
   searchKey = '',
   searchPlaceholder = 'Cari...',
   actions,
-  initialSort = { key: '', direction: '' }
+  initialSort = { key: '', direction: '' },
+  initialPageSize = 25
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [sortConfig, setSortConfig] = useState(initialSort);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(initialPageSize);
 
   // Filter Data
   const filteredData = useMemo(() => {
-    if (!searchQuery || !searchKey) return data;
+    if (!debouncedSearchQuery || !searchKey) return data;
     return data.filter(row => {
       const val = row[searchKey];
       if (!val) return false;
-      return val.toString().toLowerCase().includes(searchQuery.toLowerCase());
+      return val.toString().toLowerCase().includes(debouncedSearchQuery.toLowerCase());
     });
-  }, [data, searchQuery, searchKey]);
+  }, [data, debouncedSearchQuery, searchKey]);
 
   // Sort Data
   const sortedData = useMemo(() => {

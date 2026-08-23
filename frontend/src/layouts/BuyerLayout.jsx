@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
+import { useDebounce } from '../hooks/useDebounce';
 import { 
   ShoppingBag, 
   ShoppingCart, 
@@ -22,9 +23,21 @@ export const BuyerLayout = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchVal, setSearchVal] = useState('');
+  const debouncedSearchVal = useDebounce(searchVal, 500);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('transfer_bank');
+
+  // Debounced auto-search navigation without pressing Enter
+  useEffect(() => {
+    if (debouncedSearchVal !== undefined) {
+      if (debouncedSearchVal.trim()) {
+        navigate(`/buyer?search=${encodeURIComponent(debouncedSearchVal.trim())}`);
+      } else if (window.location.search.includes('search=')) {
+        navigate('/buyer');
+      }
+    }
+  }, [debouncedSearchVal, navigate]);
 
   // Fetch cart details
   const { data: cartRes } = useBuyerCartQuery(user?.id);
@@ -82,7 +95,7 @@ export const BuyerLayout = () => {
       <header className="buyer-topbar">
         <div className="buyer-brand" onClick={() => navigate('/buyer')}>
           <ShoppingBag size={24} style={{ color: 'var(--primary)' }} />
-          <span>Toko Nusantara</span>
+          <span>Paingan Store</span>
         </div>
 
         <form onSubmit={handleSearchSubmit} className="buyer-search">
@@ -96,26 +109,25 @@ export const BuyerLayout = () => {
         </form>
 
         <div className="buyer-nav-actions">
-          <Link to="/buyer" className="buyer-action-link">
+          {/* <Link to="/buyer" className="buyer-action-link">
             Katalog
           </Link>
-          
-          <Link to="/buyer/orders" className="buyer-action-link">
+           */}
+          {/* <Link to="/buyer/orders" className="buyer-action-link">
             <ClipboardList size={18} />
             <span>Pesanan Saya</span>
-          </Link>
+          </Link> */}
 
-          <Link to="/buyer/chat" className="buyer-action-link">
+          {/* <Link to="/buyer/chat" className="buyer-action-link">
             <MessageSquare size={18} />
             <span>Chat</span>
-          </Link>
+          </Link> */}
 
-          <button className="cart-icon-btn" onClick={() => setCartOpen(true)} title="Keranjang Belanja">
+          {/* <button className="cart-icon-btn" onClick={() => setCartOpen(true)} title="Keranjang Belanja">
             <ShoppingCart size={20} />
             {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
-          </button>
-
-          {/* User profile with logout option */}
+          </button> */}
+          
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderLeft: '1px solid var(--neutral-200)', paddingLeft: '1rem' }}>
             <div className="user-avatar" style={{ width: '32px', height: '32px', fontSize: '0.8rem' }}>
               {user?.avatarInitial || 'RW'}
