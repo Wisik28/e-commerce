@@ -328,7 +328,7 @@ export const api = {
     toggleSellerStatus: async (sellerId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
-        const response = await fetch(`http://localhost:8081/api/v1/admin/users/${sellerId}/toggle-status`, {
+        const response = await fetch(`http://localhost:8080/api/v1/admin/users/${sellerId}/toggle-status`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -344,7 +344,7 @@ export const api = {
     deleteSeller: async (sellerId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
-        const response = await fetch(`http://localhost:8081/api/v1/admin/users/${sellerId}`, {
+        const response = await fetch(`http://localhost:8080/api/v1/admin/users/${sellerId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -605,7 +605,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch('http://localhost:8081/api/v1/seller/orders', {
+          const response = await fetch('http://localhost:8080/api/v1/seller/orders', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
@@ -625,7 +625,7 @@ export const api = {
                 orderStatus = 'cancelled';
               } else if (o.status === 'PENDING_PAYMENT') {
                 try {
-                  const payRes = await fetch(`http://localhost:8081/api/v1/orders/${o.id}/payment`, {
+                  const payRes = await fetch(`http://localhost:8080/api/v1/orders/${o.id}/payment`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                   });
                   if (payRes.ok) {
@@ -679,7 +679,7 @@ export const api = {
           cancelled: 'CANCELLED'
         };
         const backendStatus = statusMap[status] || status;
-        const response = await fetch(`http://localhost:8081/api/v1/seller/orders/${orderId}/status`, {
+        const response = await fetch(`http://localhost:8080/api/v1/seller/orders/${orderId}/status`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -699,7 +699,7 @@ export const api = {
     confirmManualPayment: async (sellerId, orderId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
-        const response = await fetch(`http://localhost:8081/api/v1/seller/orders/${orderId}/payment/confirm-manual`, {
+        const response = await fetch(`http://localhost:8080/api/v1/seller/orders/${orderId}/payment/confirm-manual`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -845,7 +845,7 @@ export const api = {
     getCart: async (buyerId) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) return { success: true, data: [] };
-      const response = await fetch('http://localhost:8081/api/v1/cart', {
+      const response = await fetch('http://localhost:8080/api/v1/cart', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Gagal mengambil keranjang');
@@ -854,7 +854,7 @@ export const api = {
       
       const mappedItems = await Promise.all(cartItems.map(async (item) => {
         try {
-          const prodRes = await fetch(`http://localhost:8081/api/v1/products/${item.productId}`);
+          const prodRes = await fetch(`http://localhost:8080/api/v1/products/${item.productId}`);
           if (prodRes.ok) {
             const prodData = await prodRes.json();
             const product = prodData.data;
@@ -891,7 +891,7 @@ export const api = {
     addToCart: async (buyerId, { productId, qty = 1 }) => {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
-      const response = await fetch('http://localhost:8081/api/v1/cart/items', {
+      const response = await fetch('http://localhost:8080/api/v1/cart/items', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -915,7 +915,7 @@ export const api = {
       const item = cartItems.find(i => i.productId === productId);
       if (!item) throw new Error('Item tidak ditemukan di keranjang.');
       
-      const response = await fetch(`http://localhost:8081/api/v1/cart/items/${item.id}`, {
+      const response = await fetch(`http://localhost:8080/api/v1/cart/items/${item.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -939,7 +939,7 @@ export const api = {
       const item = cartItems.find(i => i.productId === productId);
       if (!item) throw new Error('Item tidak ditemukan di keranjang.');
       
-      const response = await fetch(`http://localhost:8081/api/v1/cart/items/${item.id}`, {
+      const response = await fetch(`http://localhost:8080/api/v1/cart/items/${item.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -962,7 +962,7 @@ export const api = {
       
       const cartItemIds = cartItems.map(item => item.id);
       
-      const response = await fetch('http://localhost:8081/api/v1/orders', {
+      const response = await fetch('http://localhost:8080/api/v1/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -990,7 +990,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (token) {
         try {
-          const response = await fetch('http://localhost:8081/api/v1/orders', {
+          const response = await fetch('http://localhost:8080/api/v1/orders', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
@@ -1010,7 +1010,7 @@ export const api = {
                 orderStatus = 'cancelled';
               } else if (o.status === 'PENDING_PAYMENT') {
                 try {
-                  const payRes = await fetch(`http://localhost:8081/api/v1/orders/${o.id}/payment`, {
+                  const payRes = await fetch(`http://localhost:8080/api/v1/orders/${o.id}/payment`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                   });
                   if (payRes.ok) {
@@ -1057,7 +1057,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
       
-      const response = await fetch(`http://localhost:8081/api/v1/orders/${orderId}/payment-proof`, {
+      const response = await fetch(`http://localhost:8080/api/v1/orders/${orderId}/payment-proof`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1078,7 +1078,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) return { success: true, data: [] };
       try {
-        const response = await fetch('http://localhost:8081/api/v1/conversations', {
+        const response = await fetch('http://localhost:8080/api/v1/conversations', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
@@ -1106,7 +1106,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) return { success: true, data: [] };
       try {
-        const response = await fetch(`http://localhost:8081/api/v1/conversations/${conversationId}/messages`, {
+        const response = await fetch(`http://localhost:8080/api/v1/conversations/${conversationId}/messages`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
@@ -1137,7 +1137,7 @@ export const api = {
         messageType: attachmentUrl ? 'IMAGE' : 'TEXT'
       };
 
-      const response = await fetch(`http://localhost:8081/api/v1/conversations/${conversationId}/messages`, {
+      const response = await fetch(`http://localhost:8080/api/v1/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1166,7 +1166,7 @@ export const api = {
       const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
 
-      const response = await fetch('http://localhost:8081/api/v1/conversations', {
+      const response = await fetch('http://localhost:8080/api/v1/conversations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
