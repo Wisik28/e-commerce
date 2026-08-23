@@ -15,6 +15,12 @@ import com.example.ecommerce.user.entity.User;
 import com.example.ecommerce.user.entity.UserRole;
 import com.example.ecommerce.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import com.example.ecommerce.user.entity.UserStatus;
+import com.example.ecommerce.seller.repository.SellerProfileRepository;
+import com.example.ecommerce.catalog.repository.ProductRepository;
+import com.example.ecommerce.order.repository.OrderItemRepository;
+import com.example.ecommerce.common.exception.ResourceNotFoundException;
+import com.example.ecommerce.common.exception.BusinessRuleException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -33,6 +39,9 @@ public class AdminController {
     private final AdminDashboardService adminDashboardService;
     private final OrderService orderService;
     private final UserRepository userRepository;
+    private final SellerProfileRepository sellerProfileRepository;
+    private final ProductRepository productRepository;
+    private final OrderItemRepository orderItemRepository;
 
     @GetMapping("/sellers/pending")
     public ResponseEntity<ApiResponse<PagedResponse<SellerProfileResponse>>> getPendingSellers(
@@ -90,6 +99,21 @@ public class AdminController {
             map.put("role", user.getRole().name());
             map.put("status", user.getStatus().name());
             map.put("createdAt", user.getCreatedAt());
+
+            if (user.getRole() == UserRole.SELLER) {
+                var profileOpt = sellerProfileRepository.findById(user.getId());
+                if (profileOpt.isPresent()) {
+                    map.put("storeName", profileOpt.get().getStoreName());
+                    map.put("category", profileOpt.get().getStoreDescription());
+                    map.put("verificationStatus", profileOpt.get().getVerificationStatus().name());
+                } else {
+                    map.put("storeName", user.getFullName() + "'s Store");
+                    map.put("category", "General");
+                    map.put("verificationStatus", "APPROVED");
+                }
+                map.put("productsCount", productRepository.countBySellerId(user.getId()));
+                map.put("ordersCount", orderItemRepository.countOrdersBySellerId(user.getId()));
+            }
             return (Object) map;
         });
 
@@ -107,5 +131,32 @@ public class AdminController {
                 page.getContent(), page.getNumber(), page.getSize(),
                 page.getTotalElements(), page.getTotalPages(), page.isLast());
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/users/{userId}/toggle-status")
+    public ResponseEntity<ApiResponse<Void>> toggleUserStatus(@PathVariable UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        
+        if (user.getStatus() == UserStatus.ACTIVE) {
+            user.setStatus(UserStatus.INACTIVE);
+        } else {
+            user.setStatus(UserStatus.ACTIVE);
+        }
+        userRepository.save(user);
+        return ResponseEntity.ok(ApiResponse.success("Status pengguna berhasil diubah"));
+    }
+
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        
+        try {
+            userRepository.delete(user);
+        } catch (Exception e) {
+            throw new BusinessRuleException("Tidak dapat menghapus penjual yang memiliki produk atau transaksi. Silakan nonaktifkan penjual saja.");
+        }
+        return ResponseEntity.ok(ApiResponse.success("Pengguna berhasil dihapus"));
     }
 }

@@ -100,4 +100,14 @@ public class SellerController {
                 principal.getId(), orderId, request);
         return ResponseEntity.ok(ApiResponse.success("Payment confirmed", response));
     }
+
+    @PutMapping("/orders/{orderId}/status")
+    public ResponseEntity<ApiResponse<OrderResponse>> updateOrderStatus(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID orderId,
+            @RequestBody java.util.Map<String, String> body) {
+        String status = body.get("status");
+        OrderResponse response = orderService.updateOrderStatus(orderId, principal.getId(), status);
+        return ResponseEntity.ok(ApiResponse.success("Order status updated", response));
+    }
 }

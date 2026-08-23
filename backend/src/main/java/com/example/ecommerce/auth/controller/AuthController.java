@@ -44,6 +44,33 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Login berhasil", response));
     }
 
+    // endpoint untuk login user menggunakan google OAuth
+    // role user akan ditentukan oleh sistem saat login
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<AuthResponse>> loginWithGoogle(
+            @Valid @RequestBody GoogleLoginRequest request) {
+        AuthResponse response = authService.loginWithGoogle(request);
+        return ResponseEntity.ok(ApiResponse.success("Login berhasil", response));
+    }
+
+    // endpoint untuk register user dengan role buyer menggunakan google OAuth
+    @PostMapping("/google/register/buyer")
+    public ResponseEntity<ApiResponse<AuthResponse>> registerGoogleBuyer(
+            @Valid @RequestBody GoogleRegisterBuyerRequest request) {
+        AuthResponse response = authService.registerGoogleBuyer(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Registrasi akun pembeli berhasil, menunggu verifikasi admin", response));
+    }
+
+    // endpoint untuk register user dengan role seller menggunakan google OAuth
+    @PostMapping("/google/register/seller")
+    public ResponseEntity<ApiResponse<AuthResponse>> registerGoogleSeller(
+            @Valid @RequestBody GoogleRegisterSellerRequest request) {
+        AuthResponse response = authService.registerGoogleSeller(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Registrasi akun penjual berhasil, menunggu verifiikasi admin", response));
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
             @Valid @RequestBody RefreshTokenRequest request) {

@@ -1,7 +1,7 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://${DB_HOST:db.cgvohdobsjvyxsgacuky.supabase.co}:${DB_PORT:5432}/${DB_NAME:postgres}}
-    username: ${DB_USERNAME:postgres}
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:aws-0-ap-southeast-1.pooler.supabase.com}:${DB_PORT:6543}/${DB_NAME:postgres}?prepareThreshold=0}
+    username: ${DB_USERNAME:postgres.cgvohdobsjvyxsgacuky}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   jpa:
@@ -24,7 +24,14 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
+# konfiguraasi google OAuth
 google:
+  client-id: ${GOOGLE_CLIENT_ID:}
+  client-secret: ${GOOGLE_CLIENT_SECRET:}
   recaptcha:
     enabled: false
 
+# konfigurasi recaptcha
+recaptcha:
+  secret: ${RECAPTCHA_SECRET:}
+  enabled: ${RECAPTCHA_ENABLED:false}
