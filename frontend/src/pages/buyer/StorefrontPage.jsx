@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useBuyerProductsQuery, useBuyerAddToCartMutation } from '../../hooks/useApi';
 import { Star, ShoppingCart, Tag } from 'lucide-react';
@@ -7,6 +7,11 @@ import { Star, ShoppingCart, Tag } from 'lucide-react';
 export const StorefrontPage = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  
+  const handleProductCardClick = (product) => {
+    navigate('/buyer/order', { state: { product } });
+  };
   
   // Extract search from URL query
   const queryParams = new URLSearchParams(location.search);
@@ -68,7 +73,7 @@ export const StorefrontPage = () => {
       ) : (
         <div className="product-grid">
           {products.map(prod => (
-            <div key={prod.id} className="product-card">
+            <div key={prod.id} className="product-card" onClick={() => handleProductCardClick(prod)} style={{ cursor: 'pointer' }}>
               <div className="product-card-img-wrapper">
                 <img src={prod.imageUrl} alt={prod.name} className="product-card-img" />
                 {prod.stock <= prod.reorderThreshold && (

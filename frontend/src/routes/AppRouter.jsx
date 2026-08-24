@@ -14,6 +14,7 @@ import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
 import SellerDashboardPage from '../pages/seller/SellerDashboardPage';
 import ProductsInventoryPage from '../pages/seller/ProductsInventoryPage';
 import StorefrontPage from '../pages/buyer/StorefrontPage';
+import BuyerOrderPage from '../pages/buyer/BuyerOrderPage';
 import BuyerOrdersPage from '../pages/buyer/BuyerOrdersPage';
 import BuyerChatPage from '../pages/buyer/BuyerChatPage';
 
@@ -73,6 +74,7 @@ export const AppRouter = () => {
       <Route element={<RoleGuard allow="buyer" />}>
         <Route element={<BuyerLayout />}>
           <Route path="/buyer" element={<StorefrontPage />} />
+          <Route path="/buyer/order" element={<BuyerOrderPage />} />
           <Route path="/buyer/orders" element={<BuyerOrdersPage />} />
           <Route path="/buyer/chat" element={<BuyerChatPage />} />
         </Route>

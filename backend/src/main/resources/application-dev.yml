@@ -1,7 +1,7 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://${DB_HOST:aws-0-ap-southeast-1.pooler.supabase.com}:${DB_PORT:6543}/${DB_NAME:postgres}?prepareThreshold=0}
-    username: ${DB_USERNAME:postgres.cgvohdobsjvyxsgacuky}
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:postgres}?prepareThreshold=0}
+    username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   jpa:

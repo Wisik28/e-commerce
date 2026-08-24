@@ -72,4 +72,15 @@ public class AuthController {
         AuthResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(ApiResponse.success("Token diperbarui", response));
     }
+
+    // endpoint untuk memeriksa apakah user layak melakukan order atau tidak
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getMe(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.example.ecommerce.common.security.UserPrincipal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthorized"));
+        }
+        var profile = authService.getUserProfile(principal.getId());
+        return ResponseEntity.ok(ApiResponse.success(profile));
+    }
 }
