@@ -282,4 +282,19 @@ public class AuthService {
 
         return generateAuthResponse(user);
     }
+
+    // method untuk mengambil data buyer agar nantinya ditampilkan di /buyer/order page
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> getUserProfile(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessRuleException("User not found"));
+        var map = new java.util.HashMap<String, Object>();
+        map.put("id", user.getId());
+        map.put("email", user.getEmail());
+        map.put("fullName", user.getFullName());
+        map.put("phone", user.getPhone());
+        map.put("role", user.getRole().name());
+        map.put("status", user.getStatus().name());
+        return map;
+    }
 }

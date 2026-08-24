@@ -75,7 +75,7 @@ public class PaymentService {
         // For VA, call payment gateway
         if (method == PaymentMethod.VIRTUAL_ACCOUNT) {
             try {
-                var result = paymentGateway.createVirtualAccount(payment.getId(), order.getTotalAmount());
+                var result = paymentGateway.createVirtualAccountForBank(payment.getId(), order.getTotalAmount(), request.getBank());
                 payment.setVirtualAccountNumber(result.virtualAccountNumber());
                 payment.setExternalReference(result.externalReference());
                 payment.setProvider(result.provider());

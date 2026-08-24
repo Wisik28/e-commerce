@@ -7,6 +7,10 @@ public interface PaymentGateway {
 
     CreateVirtualAccountResult createVirtualAccount(UUID paymentId, BigDecimal amount);
 
+    default CreateVirtualAccountResult createVirtualAccountForBank(UUID paymentId, BigDecimal amount, String bank) {
+        return createVirtualAccount(paymentId, amount);
+    }
+
     boolean validateWebhook(String payload, String signature);
 
     PaymentWebhookResult parseWebhook(String payload);
