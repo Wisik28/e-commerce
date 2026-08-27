@@ -34,7 +34,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     @Query("SELECT p FROM Product p WHERE p.status = :status AND " +
            "(LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+           "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND p.deletedAt IS NULL")
     Page<Product> searchByKeyword(@Param("keyword") String keyword,
                                   @Param("status") ProductStatus status,
                                   Pageable pageable);

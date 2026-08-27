@@ -38,6 +38,7 @@ public class PaymentService {
     private final PaymentGateway paymentGateway;
     private final AuditLogService auditLogService;
     private final PaymentProofRepository paymentProofRepository;
+    private final com.example.ecommerce.common.service.CloudinaryService cloudinaryService;
 
     @Transactional
     public PaymentResponse createPayment(UUID buyerId, UUID orderId, CreatePaymentRequest request) {
@@ -52,23 +53,27 @@ public class PaymentService {
             throw new BusinessRuleException("Order is not in PENDING_PAYMENT status");
         }
 
-        // Check if active payment already exists
-        paymentRepository.findByOrderId(orderId).ifPresent(existing -> {
-            if (existing.getStatus() != PaymentStatus.FAILED &&
-                existing.getStatus() != PaymentStatus.CANCELLED &&
-                existing.getStatus() != PaymentStatus.EXPIRED) {
-                throw new BusinessRuleException("An active payment already exists for this order");
-            }
-        });
-
         PaymentMethod method = PaymentMethod.valueOf(request.getPaymentMethod());
 
-        Payment payment = Payment.builder()
-                .order(order)
-                .paymentMethod(method)
-                .status(PaymentStatus.PENDING)
-                .amount(order.getTotalAmount())
-                .build();
+        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
+        if (payment != null) {
+            if (payment.getStatus() != PaymentStatus.PENDING &&
+                payment.getStatus() != PaymentStatus.PROCESSING &&
+                payment.getStatus() != PaymentStatus.FAILED &&
+                payment.getStatus() != PaymentStatus.CANCELLED &&
+                payment.getStatus() != PaymentStatus.EXPIRED) {
+                throw new BusinessRuleException("An active payment already exists for this order");
+            }
+            payment.setPaymentMethod(method);
+            payment.setAmount(order.getTotalAmount());
+        } else {
+            payment = Payment.builder()
+                    .order(order)
+                    .paymentMethod(method)
+                    .status(PaymentStatus.PENDING)
+                    .amount(order.getTotalAmount())
+                    .build();
+        }
 
         payment = paymentRepository.save(payment);
 
@@ -98,6 +103,38 @@ public class PaymentService {
         Payment payment = paymentRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", "orderId", orderId));
 
+        return toResponse(payment);
+    }
+
+    @Transactional
+    public PaymentResponse simulateVaPaymentSuccess(UUID buyerId, UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        if (!order.getBuyer().getId().equals(buyerId)) {
+            throw new BusinessRuleException("Order does not belong to this buyer");
+        }
+
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseGet(() -> {
+                    Payment newPay = Payment.builder()
+                            .order(order)
+                            .paymentMethod(PaymentMethod.VIRTUAL_ACCOUNT)
+                            .status(PaymentStatus.PENDING)
+                            .amount(order.getTotalAmount())
+                            .build();
+                    return paymentRepository.save(newPay);
+                });
+
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setPaidAt(Instant.now());
+        paymentRepository.save(payment);
+
+        order.setStatus(OrderStatus.PAID);
+        order.setPaidAt(Instant.now());
+        orderRepository.save(order);
+
+        auditLogService.log(buyerId, "VA_PAYMENT_SIMULATED_PAID", "PAYMENT", payment.getId());
         return toResponse(payment);
     }
 
@@ -153,13 +190,20 @@ public class PaymentService {
         List<PaymentProof> existingProofs = paymentProofRepository.findByPaymentId(payment.getId());
         paymentProofRepository.deleteAll(existingProofs);
 
+        String uploadedUrl;
+        if (proofDataUrl != null && (proofDataUrl.startsWith("http://") || proofDataUrl.startsWith("https://"))) {
+            uploadedUrl = proofDataUrl;
+        } else {
+            uploadedUrl = cloudinaryService.uploadImage(proofDataUrl, "payment_proofs");
+        }
+
         PaymentProof proof = PaymentProof.builder()
                 .payment(payment)
                 .uploadedBy(order.getBuyer())
-                .fileUrl(proofDataUrl)
+                .fileUrl(uploadedUrl)
                 .fileName("proof_transfer.png")
                 .mimeType("image/png")
-                .fileSize((long) proofDataUrl.length())
+                .fileSize((long) uploadedUrl.length())
                 .submittedAt(Instant.now())
                 .reviewStatus(ReviewStatus.PENDING)
                 .build();
@@ -168,6 +212,7 @@ public class PaymentService {
 
         auditLogService.log(buyerId, "PAYMENT_PROOF_UPLOADED", "PAYMENT", payment.getId());
     }
+
 
     private PaymentResponse toResponse(Payment payment) {
         String proofUrl = null;

@@ -667,11 +667,11 @@ button, input, select, textarea {
   border-radius: 50%;
 }
 
-.status-pill.aktif, .status-pill.terkirim, .status-pill.sehat, .status-pill.approved {
+.status-pill.aktif, .status-pill.terkirim, .status-pill.sehat, .status-pill.approved, .status-pill.PAID, .status-pill.paid, .status-pill.LUNAS, .status-pill.lunas {
   background-color: var(--success-bg);
   color: var(--success);
 }
-.status-pill.aktif .status-pill-dot, .status-pill.terkirim .status-pill-dot, .status-pill.sehat .status-pill-dot, .status-pill.approved .status-pill-dot {
+.status-pill.aktif .status-pill-dot, .status-pill.terkirim .status-pill-dot, .status-pill.sehat .status-pill-dot, .status-pill.approved .status-pill-dot, .status-pill.PAID .status-pill-dot, .status-pill.paid .status-pill-dot, .status-pill.LUNAS .status-pill-dot, .status-pill.lunas .status-pill-dot {
   background-color: var(--success);
 }
 
@@ -691,19 +691,19 @@ button, input, select, textarea {
   background-color: var(--warning);
 }
 
-.status-pill.menunggu, .status-pill.pending, .status-pill.proof_submitted {
+.status-pill.menunggu, .status-pill.pending, .status-pill.PENDING_PAYMENT, .status-pill.proof_submitted, .status-pill.PROOF_SUBMITTED {
   background-color: var(--pending-bg);
   color: var(--pending);
 }
-.status-pill.menunggu .status-pill-dot, .status-pill.pending .status-pill-dot, .status-pill.proof_submitted .status-pill-dot {
+.status-pill.menunggu .status-pill-dot, .status-pill.pending .status-pill-dot, .status-pill.PENDING_PAYMENT .status-pill-dot, .status-pill.proof_submitted .status-pill-dot, .status-pill.PROOF_SUBMITTED .status-pill-dot {
   background-color: var(--pending);
 }
 
-.status-pill.nonaktif, .status-pill.habis, .status-pill.rejected, .status-pill.failed, .status-pill.cancelled {
+.status-pill.nonaktif, .status-pill.habis, .status-pill.rejected, .status-pill.failed, .status-pill.cancelled, .status-pill.CANCELLED, .status-pill.expired, .status-pill.EXPIRED {
   background-color: var(--danger-bg);
   color: var(--danger);
 }
-.status-pill.nonaktif .status-pill-dot, .status-pill.habis .status-pill-dot, .status-pill.rejected .status-pill-dot, .status-pill.failed .status-pill-dot, .status-pill.cancelled .status-pill-dot {
+.status-pill.nonaktif .status-pill-dot, .status-pill.habis .status-pill-dot, .status-pill.rejected .status-pill-dot, .status-pill.failed .status-pill-dot, .status-pill.cancelled .status-pill-dot, .status-pill.CANCELLED .status-pill-dot, .status-pill.expired .status-pill-dot, .status-pill.EXPIRED .status-pill-dot {
   background-color: var(--danger);
 }
 

@@ -35,19 +35,28 @@ public class JwtService {
     }
 
     public String generateAccessToken(UUID userId, String role) {
-        return buildToken(userId, role, accessExpiration);
+        return buildToken(userId, "", role, accessExpiration);
+    }
+
+    public String generateAccessToken(UUID userId, String email, String role) {
+        return buildToken(userId, email, role, accessExpiration);
     }
 
     public String generateRefreshToken(UUID userId, String role) {
-        return buildToken(userId, role, refreshExpiration);
+        return buildToken(userId, "", role, refreshExpiration);
     }
 
-    private String buildToken(UUID userId, String role, long expiration) {
+    public String generateRefreshToken(UUID userId, String email, String role) {
+        return buildToken(userId, email, role, refreshExpiration);
+    }
+
+    private String buildToken(UUID userId, String email, String role, long expiration) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
                 .subject(userId.toString())
+                .claim("email", email)
                 .claim("role", role)
                 .issuedAt(now)
                 .expiration(expiryDate)
@@ -58,6 +67,12 @@ public class JwtService {
     public UUID getUserIdFromToken(String token) {
         Claims claims = parseClaims(token);
         return UUID.fromString(claims.getSubject());
+    }
+
+    public String getEmailFromToken(String token) {
+        Claims claims = parseClaims(token);
+        String email = claims.get("email", String.class);
+        return email != null ? email : "";
     }
 
     public String getRoleFromToken(String token) {

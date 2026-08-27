@@ -16,6 +16,10 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
 
     List<OrderItem> findByOrderId(UUID orderId);
 
+    List<OrderItem> findByOrderIdIn(List<UUID> orderIds);
+
+    boolean existsByOrderIdAndSellerId(UUID orderId, UUID sellerId);
+
     @Query("SELECT DISTINCT oi.order FROM OrderItem oi WHERE oi.seller.id = :sellerId")
     Page<com.example.ecommerce.order.entity.Order> findOrdersBySellerId(
             @Param("sellerId") UUID sellerId, Pageable pageable);

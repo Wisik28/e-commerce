@@ -21,7 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,25 +34,29 @@ public class ProductService {
     private final UserRepository userRepository;
     private final SellerProfileRepository sellerProfileRepository;
 
+    @Transactional(readOnly = true)
     public Page<ProductResponse> getActiveProducts(Pageable pageable) {
-        return productRepository.findByStatus(ProductStatus.ACTIVE, pageable)
-                .map(this::toResponse);
+        Page<Product> products = productRepository.findByStatus(ProductStatus.ACTIVE, pageable);
+        return mapProductsToResponses(products);
     }
 
+    @Transactional(readOnly = true)
     public Page<ProductResponse> searchProducts(String keyword, Pageable pageable) {
-        return productRepository.searchByKeyword(keyword, ProductStatus.ACTIVE, pageable)
-                .map(this::toResponse);
+        Page<Product> products = productRepository.searchByKeyword(keyword, ProductStatus.ACTIVE, pageable);
+        return mapProductsToResponses(products);
     }
 
+    @Transactional(readOnly = true)
     public ProductResponse getProductById(UUID productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
         return toResponse(product);
     }
 
+    @Transactional(readOnly = true)
     public Page<ProductResponse> getSellerProducts(UUID sellerId, Pageable pageable) {
-        return productRepository.findBySellerId(sellerId, pageable)
-                .map(this::toResponse);
+        Page<Product> products = productRepository.findBySellerId(sellerId, pageable);
+        return mapProductsToResponses(products);
     }
 
     @Transactional
@@ -116,6 +123,26 @@ public class ProductService {
         }
     }
 
+    private Page<ProductResponse> mapProductsToResponses(Page<Product> products) {
+        if (products.isEmpty()) {
+            return products.map(this::toResponse);
+        }
+
+        List<UUID> sellerIds = products.getContent().stream()
+                .filter(p -> p.getSeller() != null)
+                .map(p -> p.getSeller().getId())
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+
+        Map<UUID, String> storeNamesBySellerId = sellerProfileRepository.findAllById(sellerIds).stream()
+                .collect(java.util.stream.Collectors.toMap(SellerProfile::getUserId, SellerProfile::getStoreName));
+
+        return products.map(product -> {
+            String storeName = product.getSeller() != null ? storeNamesBySellerId.get(product.getSeller().getId()) : null;
+            return toResponseWithStoreName(product, storeName);
+        });
+    }
+
     private ProductResponse toResponse(Product product) {
         String storeName = null;
         if (product.getSeller() != null) {
@@ -123,10 +150,13 @@ public class ProductService {
                     .orElse(null);
             if (profile != null) storeName = profile.getStoreName();
         }
+        return toResponseWithStoreName(product, storeName);
+    }
 
+    private ProductResponse toResponseWithStoreName(Product product, String storeName) {
         return ProductResponse.builder()
                 .id(product.getId())
-                .sellerId(product.getSeller().getId())
+                .sellerId(product.getSeller() != null ? product.getSeller().getId() : null)
                 .sellerStoreName(storeName)
                 .name(product.getName())
                 .description(product.getDescription())
@@ -138,4 +168,5 @@ public class ProductService {
                 .updatedAt(product.getUpdatedAt())
                 .build();
     }
+
 }

@@ -33,9 +33,29 @@ public class ConversationService {
     private final OrderRepository orderRepository;
     private final SellerProfileRepository sellerProfileRepository;
 
+    @Transactional(readOnly = true)
     public Page<ConversationResponse> getConversations(UUID userId, Pageable pageable) {
-        return conversationRepository.findByParticipant(userId, pageable)
-                .map(this::toConversationResponse);
+        Page<Conversation> conversations = conversationRepository.findByParticipant(userId, pageable);
+        if (conversations.isEmpty()) {
+            return conversations.map(this::toConversationResponse);
+        }
+
+        java.util.List<UUID> sellerIds = conversations.getContent().stream()
+                .filter(c -> c.getSeller() != null)
+                .map(c -> c.getSeller().getId())
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+
+        java.util.Map<UUID, String> storeNamesBySellerId = sellerProfileRepository.findAllById(sellerIds).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.example.ecommerce.seller.entity.SellerProfile::getUserId,
+                        com.example.ecommerce.seller.entity.SellerProfile::getStoreName
+                ));
+
+        return conversations.map(c -> {
+            String storeName = c.getSeller() != null ? storeNamesBySellerId.get(c.getSeller().getId()) : null;
+            return toConversationResponseWithStoreName(c, storeName);
+        });
     }
 
     @Transactional
@@ -122,6 +142,10 @@ public class ConversationService {
                 .map(p -> p.getStoreName())
                 .orElse(null);
 
+        return toConversationResponseWithStoreName(c, storeName);
+    }
+
+    private ConversationResponse toConversationResponseWithStoreName(Conversation c, String storeName) {
         return ConversationResponse.builder()
                 .id(c.getId())
                 .buyerId(c.getBuyer().getId())
@@ -133,6 +157,7 @@ public class ConversationService {
                 .updatedAt(c.getUpdatedAt())
                 .build();
     }
+
 
     private MessageResponse toMessageResponse(Message m) {
         return MessageResponse.builder()
