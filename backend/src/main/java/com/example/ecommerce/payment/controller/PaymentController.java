@@ -47,4 +47,12 @@ public class PaymentController {
         paymentService.uploadPaymentProof(principal.getId(), orderId, body.get("proofDataUrl"));
         return ResponseEntity.ok(ApiResponse.success("Payment proof uploaded successfully"));
     }
+
+    @PostMapping("/pay-simulate")
+    public ResponseEntity<ApiResponse<PaymentResponse>> simulatePayment(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID orderId) {
+        PaymentResponse response = paymentService.simulateVaPaymentSuccess(principal.getId(), orderId);
+        return ResponseEntity.ok(ApiResponse.success("Pembayaran Virtual Account Berhasil (Lunas)", response));
+    }
 }

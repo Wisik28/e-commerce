@@ -15,10 +15,11 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+# token untuk setting agar expired ketika tab lama tidak dibuka
 jwt:
   secret: ${JWT_SECRET:}
-  access-expiration: ${JWT_ACCESS_EXPIRATION:900000}
-  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+  access-expiration: ${JWT_ACCESS_EXPIRATION:2592000000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:2592000000}
 
 storage:
   provider: ${STORAGE_PROVIDER:local}
@@ -49,3 +50,10 @@ google:
 recaptcha:
   secret: ${RECAPTCHA_SECRET:}
   enabled: ${RECAPTCHA_ENABLED:false}
+
+# konfigurasi Cloudinary
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_SECRET_KEY:${CLOUDINARY_API_SECRET:}}
+

@@ -266,6 +266,16 @@ export const useBuyerUploadPaymentProofMutation = (buyerId) => {
   });
 };
 
+export const useBuyerSimulateVaPaymentMutation = (buyerId) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId) => api.buyer.simulateVaPayment(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['buyer', buyerId, 'orders'] });
+    },
+  });
+};
+
 // ==========================================
 // CHAT HOOKS
 // ==========================================

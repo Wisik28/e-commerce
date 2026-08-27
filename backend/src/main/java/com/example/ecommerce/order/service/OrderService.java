@@ -26,19 +26,20 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
 
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getBuyerOrders(UUID buyerId, Pageable pageable) {
-        return orderRepository.findByBuyerId(buyerId, pageable)
-                .map(this::toOrderResponse);
+        Page<Order> orders = orderRepository.findByBuyerId(buyerId, pageable);
+        return mapOrdersToResponses(orders);
     }
 
+    @Transactional(readOnly = true)
     public OrderResponse getOrderById(UUID orderId, UUID userId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
 
         // Check if user is buyer or has items as seller
         boolean isBuyer = order.getBuyer().getId().equals(userId);
-        boolean isSeller = orderItemRepository.findByOrderId(orderId).stream()
-                .anyMatch(item -> item.getSeller().getId().equals(userId));
+        boolean isSeller = orderItemRepository.existsByOrderIdAndSellerId(orderId, userId);
 
         if (!isBuyer && !isSeller) {
             throw new ForbiddenException("You do not have access to this order");
@@ -47,19 +48,46 @@ public class OrderService {
         return toOrderResponse(order);
     }
 
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getSellerOrders(UUID sellerId, Pageable pageable) {
-        return orderItemRepository.findOrdersBySellerId(sellerId, pageable)
-                .map(this::toOrderResponse);
+        Page<Order> orders = orderItemRepository.findOrdersBySellerId(sellerId, pageable);
+        return mapOrdersToResponses(orders);
     }
 
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getAllOrders(Pageable pageable) {
-        return orderRepository.findAll(pageable)
-                .map(this::toOrderResponse);
+        Page<Order> orders = orderRepository.findAll(pageable);
+        return mapOrdersToResponses(orders);
+    }
+
+    private Page<OrderResponse> mapOrdersToResponses(Page<Order> orders) {
+        if (orders.isEmpty()) {
+            return orders.map(this::toOrderResponse);
+        }
+
+        List<UUID> orderIds = orders.getContent().stream()
+                .map(Order::getId)
+                .collect(Collectors.toList());
+
+        List<OrderItem> allItems = orderItemRepository.findByOrderIdIn(orderIds);
+        var itemsByOrderId = allItems.stream()
+                .collect(Collectors.groupingBy(item -> item.getOrder().getId()));
+
+        return orders.map(order -> {
+            List<OrderItem> items = itemsByOrderId.getOrDefault(order.getId(), List.of());
+            order.setItems(items);
+            return toOrderResponseWithItems(order, items);
+        });
     }
 
     private OrderResponse toOrderResponse(Order order) {
-        List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+        List<OrderItem> items = order.getItems() != null && !order.getItems().isEmpty()
+                ? order.getItems()
+                : orderItemRepository.findByOrderId(order.getId());
+        return toOrderResponseWithItems(order, items);
+    }
 
+    private OrderResponse toOrderResponseWithItems(Order order, List<OrderItem> items) {
         List<OrderItemResponse> itemResponses = items.stream()
                 .map(item -> OrderItemResponse.builder()
                         .id(item.getId())
@@ -94,8 +122,7 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
 
-        boolean hasItems = orderItemRepository.findByOrderId(orderId).stream()
-                .anyMatch(item -> item.getSeller().getId().equals(sellerId));
+        boolean hasItems = orderItemRepository.existsByOrderIdAndSellerId(orderId, sellerId);
 
         if (!hasItems) {
             throw new ForbiddenException("You do not have access to this order");
@@ -108,4 +135,5 @@ public class OrderService {
         orderRepository.save(order);
         return toOrderResponse(order);
     }
+
 }

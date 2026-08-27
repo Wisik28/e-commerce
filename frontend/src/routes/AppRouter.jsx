@@ -17,6 +17,7 @@ import StorefrontPage from '../pages/buyer/StorefrontPage';
 import BuyerOrderPage from '../pages/buyer/BuyerOrderPage';
 import BuyerOrdersPage from '../pages/buyer/BuyerOrdersPage';
 import BuyerChatPage from '../pages/buyer/BuyerChatPage';
+import BuyerProfilePage from '../pages/buyer/BuyerProfilePage';
 
 // Root Gateway Redirector
 const RootGateway = () => {
@@ -76,6 +77,7 @@ export const AppRouter = () => {
           <Route path="/buyer" element={<StorefrontPage />} />
           <Route path="/buyer/order" element={<BuyerOrderPage />} />
           <Route path="/buyer/orders" element={<BuyerOrdersPage />} />
+          <Route path="/buyer/profile" element={<BuyerProfilePage />} />
           <Route path="/buyer/chat" element={<BuyerChatPage />} />
         </Route>
       </Route>

@@ -50,6 +50,7 @@ public class CheckoutService {
     private final OrderItemRepository orderItemRepository;
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Transactional
     public OrderResponse checkout(UUID buyerId, CheckoutRequest request) {
@@ -59,14 +60,15 @@ public class CheckoutService {
         Cart cart = cartRepository.findByBuyerId(buyerId)
                 .orElseThrow(() -> new BusinessRuleException("Cart is empty"));
 
-        // Load selected cart items
-        List<CartItem> selectedItems = request.getCartItemIds().stream()
-                .map(id -> cartItemRepository.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("CartItem", "id", id)))
-                .collect(Collectors.toList());
+        if (request.getCartItemIds() == null || request.getCartItemIds().isEmpty()) {
+            throw new BusinessRuleException("No items selected for checkout");
+        }
+
+        // Batch load selected cart items (resolves N+1 query)
+        List<CartItem> selectedItems = cartItemRepository.findAllById(request.getCartItemIds());
 
         if (selectedItems.isEmpty()) {
-            throw new BusinessRuleException("No items selected for checkout");
+            throw new BusinessRuleException("No valid cart items found for checkout");
         }
 
         // Validate ownership
@@ -122,7 +124,7 @@ public class CheckoutService {
         // Save updated stock
         productRepository.saveAll(lockedProducts);
 
-        // Create order
+        // Create order in PENDING_PAYMENT status
         BigDecimal shippingFee = BigDecimal.ZERO; // Simplified for MVP
         BigDecimal totalAmount = subtotal.add(shippingFee);
 
@@ -133,8 +135,9 @@ public class CheckoutService {
                 .subtotal(subtotal)
                 .shippingFee(shippingFee)
                 .totalAmount(totalAmount)
-                .shippingAddress(request.getShippingAddress())
+                .shippingAddress(formatShippingAddressToJson(request.getShippingAddress()))
                 .notes(request.getNotes())
+                .paidAt(null)
                 .build();
 
         order = orderRepository.save(order);
@@ -145,12 +148,13 @@ public class CheckoutService {
         }
         orderItemRepository.saveAll(orderItems);
 
-        // Create payment PENDING
+        // Create payment in PENDING status
         Payment payment = Payment.builder()
                 .order(order)
                 .paymentMethod(PaymentMethod.VIRTUAL_ACCOUNT)
                 .status(PaymentStatus.PENDING)
                 .amount(totalAmount)
+                .paidAt(null)
                 .build();
         paymentRepository.save(payment);
 
@@ -196,4 +200,22 @@ public class CheckoutService {
                 .completedAt(order.getCompletedAt())
                 .build();
     }
+
+    // konversi format atribut address agar database tidak menerima string mentah melainkan menerima json
+    // jika hanya menerima string mentah nantinya pasti akan muncul error
+    private String formatShippingAddressToJson(String rawAddress) {
+        if (rawAddress == null || rawAddress.trim().isEmpty()) {
+            return "{\"address\":\"\"}";
+        }
+        String trimmed = rawAddress.trim();
+        if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+            return trimmed;
+        }
+        try {
+            return objectMapper.writeValueAsString(rawAddress);
+        } catch (Exception e) {
+            return "{\"address\":\"" + rawAddress.replace("\"", "\\\"") + "\"}";
+        }
+    }
+
 }

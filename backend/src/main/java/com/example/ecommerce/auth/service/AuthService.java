@@ -55,7 +55,7 @@ public class AuthService {
     @Value("${google.client-secret:}")
     private String googleClientSecret;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Transactional
     public AuthResponse registerBuyer(RegisterBuyerRequest request) {
@@ -158,8 +158,8 @@ public class AuthService {
     }
 
     private AuthResponse generateAuthResponse(User user) {
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getRole().name());
-        String refreshTokenStr = jwtService.generateRefreshToken(user.getId(), user.getRole().name());
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole().name());
+        String refreshTokenStr = jwtService.generateRefreshToken(user.getId(), user.getEmail(), user.getRole().name());
 
         // Save refresh token hash
         RefreshToken refreshToken = RefreshToken.builder()

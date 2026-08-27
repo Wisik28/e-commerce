@@ -1,6 +1,20 @@
 import { getDB, saveDB } from './db';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
+export const getStoredToken = () => {
+  return localStorage.getItem('ecom_auth_token') || 
+         sessionStorage.getItem('ecom_auth_token') || 
+         localStorage.getItem('ecom_token') || 
+         sessionStorage.getItem('ecom_token');
+};
+
+export const setStoredToken = (token) => {
+  if (token) {
+    localStorage.setItem('ecom_auth_token', token);
+    sessionStorage.setItem('ecom_auth_token', token);
+  }
+};
+
 async function safeJson(res) {
   const contentType = res.headers.get("content-type");
   let data = null;
@@ -71,7 +85,7 @@ export const api = {
         const decoded = parseJwt(accessToken);
         const userId = decoded?.sub;
 
-        sessionStorage.setItem('ecom_auth_token', accessToken);
+        setStoredToken(accessToken);
 
         return {
           success: true,
@@ -93,7 +107,7 @@ export const api = {
     },
 
     getMe: async () => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) return { success: false, data: null };
       try {
         const response = await fetch(API_BASE_URL + '/api/v1/auth/me', {
@@ -132,7 +146,7 @@ export const api = {
         const { accessToken, role } = result.data;
         const decoded = parseJwt(accessToken);
         const userId = decoded?.sub;
-        sessionStorage.setItem('ecom_auth_token', accessToken);
+        setStoredToken(accessToken);
 
         return {
           success: true,
@@ -173,7 +187,7 @@ export const api = {
         const { accessToken, role } = result.data;
         const decoded = parseJwt(accessToken);
         const userId = decoded?.sub;
-        sessionStorage.setItem('ecom_auth_token', accessToken);
+        setStoredToken(accessToken);
 
         return {
           success: true,
@@ -213,7 +227,7 @@ export const api = {
         const { accessToken, role } = result.data;
         const decoded = parseJwt(accessToken);
         const userId = decoded?.sub;
-        sessionStorage.setItem('ecom_auth_token', accessToken);
+        setStoredToken(accessToken);
 
         return {
           success: true,
@@ -288,7 +302,7 @@ export const api = {
 
   admin: {
     getPendingSellers: async () => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         try {
           const response = await fetch(API_BASE_URL + '/api/v1/admin/sellers/pending', {
@@ -307,7 +321,7 @@ export const api = {
     },
 
     getAllSellers: async () => {
-      let token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      let token = getStoredToken();
       if (!token) {
         try {
           const authRes = await api.auth.login('admin@ecommerce.com', 'admin123');
@@ -345,7 +359,7 @@ export const api = {
     },
 
     getAllBuyers: async () => {
-      let token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      let token = getStoredToken();
       if (!token) {
         try {
           const authRes = await api.auth.login('admin@ecommerce.com', 'admin123');
@@ -380,7 +394,7 @@ export const api = {
     },
 
     approveSeller: async (sellerId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         const response = await fetch(`${API_BASE_URL}/api/v1/admin/sellers/${sellerId}/approve`, {
           method: 'POST',
@@ -396,7 +410,7 @@ export const api = {
     },
 
     rejectSeller: async (sellerId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         const response = await fetch(`${API_BASE_URL}/api/v1/admin/sellers/${sellerId}/reject`, {
           method: 'POST',
@@ -412,7 +426,7 @@ export const api = {
     },
 
     toggleSellerStatus: async (sellerId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         const response = await fetch(`http://localhost:8080/api/v1/admin/users/${sellerId}/toggle-status`, {
           method: 'POST',
@@ -428,7 +442,7 @@ export const api = {
     },
 
     deleteSeller: async (sellerId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         const response = await fetch(`http://localhost:8080/api/v1/admin/users/${sellerId}`, {
           method: 'DELETE',
@@ -444,7 +458,7 @@ export const api = {
     },
 
     getDashboardStats: async () => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         try {
           const response = await fetch(API_BASE_URL + '/api/v1/admin/dashboard', {
@@ -492,7 +506,7 @@ export const api = {
 
   seller: {
     getProducts: async (sellerId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         try {
           const response = await fetch(API_BASE_URL + '/api/v1/seller/products', {
@@ -536,7 +550,7 @@ export const api = {
     },
 
     addProduct: async (sellerId, productData) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
 
       const body = {
         name: productData.name,
@@ -631,7 +645,7 @@ export const api = {
     },
 
     updateProduct: async (sellerId, productId, productData) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         try {
           const body = {
@@ -693,7 +707,7 @@ export const api = {
     },
 
     deleteProduct: async (sellerId, productId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         try {
           const response = await fetch(`${API_BASE_URL}/api/v1/seller/products/${productId}`, {
@@ -723,7 +737,7 @@ export const api = {
     },
 
     getOrders: async (sellerId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         try {
           const response = await fetch('http://localhost:8080/api/v1/seller/orders', {
@@ -790,7 +804,7 @@ export const api = {
     },
 
     updateOrderStatus: async (sellerId, orderId, status) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         const statusMap = {
           menunggu: 'PENDING_PAYMENT',
@@ -818,7 +832,7 @@ export const api = {
     },
 
     confirmManualPayment: async (sellerId, orderId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         const response = await fetch(`http://localhost:8080/api/v1/seller/orders/${orderId}/payment/confirm-manual`, {
           method: 'POST',
@@ -838,7 +852,7 @@ export const api = {
     },
 
     getAnalytics: async (sellerId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) return { success: true, data: {} };
       
       const prodRes = await api.seller.getProducts(sellerId);
@@ -960,7 +974,7 @@ export const api = {
     },
 
     getCart: async (buyerId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) return { success: true, data: [] };
       const response = await fetch('http://localhost:8080/api/v1/cart', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -1006,7 +1020,7 @@ export const api = {
     },
 
     addToCart: async (buyerId, { productId, qty = 1 }) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
       const response = await fetch('http://localhost:8080/api/v1/cart/items', {
         method: 'POST',
@@ -1024,7 +1038,7 @@ export const api = {
     },
 
     updateCartItem: async (buyerId, productId, qty) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
       
       const cartRes = await api.buyer.getCart(buyerId);
@@ -1048,7 +1062,7 @@ export const api = {
     },
 
     removeFromCart: async (buyerId, productId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
       
       const cartRes = await api.buyer.getCart(buyerId);
@@ -1070,7 +1084,7 @@ export const api = {
     },
 
     checkout: async (buyerId, { paymentMethod }) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
       
       const cartRes = await api.buyer.getCart(buyerId);
@@ -1104,7 +1118,7 @@ export const api = {
     },
 
     directOrder: async (buyerId, { productId, qty, buyerName, buyerEmail, buyerPhone, shippingAddress, paymentMethod }) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
 
       // 1. Add product to cart
@@ -1197,7 +1211,7 @@ export const api = {
     },
 
     getOrders: async (buyerId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (token) {
         try {
           const response = await fetch('http://localhost:8080/api/v1/orders', {
@@ -1264,7 +1278,7 @@ export const api = {
     },
 
     uploadPaymentProof: async (orderId, { proofDataUrl }) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
       
       const response = await fetch(`http://localhost:8080/api/v1/orders/${orderId}/payment-proof`, {
@@ -1280,12 +1294,30 @@ export const api = {
         throw new Error(result.message || 'Gagal mengunggah bukti pembayaran.');
       }
       return { success: true, message: 'Bukti pembayaran berhasil diunggah.' };
+    },
+
+    simulateVaPayment: async (orderId) => {
+      const token = getStoredToken();
+      if (!token) throw new Error('Anda harus login terlebih dahulu.');
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/orders/${orderId}/pay-simulate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const result = await safeJson(response);
+      if (!response.ok) {
+        throw new Error(result.message || 'Gagal memproses pembayaran VA.');
+      }
+      return { success: true, message: 'Pembayaran Virtual Account Berhasil (Lunas).', data: result.data };
     }
   },
 
   chat: {
     getConversations: async (userId, role) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) return { success: true, data: [] };
       try {
         const response = await fetch('http://localhost:8080/api/v1/conversations', {
@@ -1313,7 +1345,7 @@ export const api = {
     },
 
     getMessages: async (conversationId) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) return { success: true, data: [] };
       try {
         const response = await fetch(`http://localhost:8080/api/v1/conversations/${conversationId}/messages`, {
@@ -1339,7 +1371,7 @@ export const api = {
     },
 
     sendMessage: async (conversationId, { senderId, content, attachmentUrl = null }) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
       
       const payload = {
@@ -1373,7 +1405,7 @@ export const api = {
     },
 
     createConversation: async ({ buyerId, sellerId }) => {
-      const token = sessionStorage.getItem('ecom_auth_token') || sessionStorage.getItem('ecom_token');
+      const token = getStoredToken();
       if (!token) throw new Error('Anda harus login terlebih dahulu.');
 
       const response = await fetch('http://localhost:8080/api/v1/conversations', {
