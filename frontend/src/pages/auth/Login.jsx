@@ -99,14 +99,14 @@ export const Login = () => {
     regRecaptchaRef.current?.reset();
   };
 
-  // ==================== NAVIGASI SETELAH LOGIN ====================
+  //  NAVIGASI SETELAH LOGIN
   const navigateByRole = (role) => {
     if (role === 'admin') navigate('/admin/dashboard');
     else if (role === 'seller') navigate('/seller/dashboard');
     else navigate('/buyer');
   };
 
-  // ==================== LOGIN BIASA ====================
+  // LOGIN BIASA
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -129,7 +129,7 @@ export const Login = () => {
     }
   };
 
-  // ==================== REGISTRASI BIASA ====================
+  // REGISTRASI BIASA
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -179,7 +179,7 @@ export const Login = () => {
     }
   };
 
-  // ==================== GOOGLE LOGIN ====================
+  // GOOGLE LOGIN
   // credential = ID Token (JWT) dari Google, inilah yang dibutuhkan backend
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
@@ -204,7 +204,7 @@ export const Login = () => {
     setError('Login Google dibatalkan atau gagal. Silakan coba lagi.');
   };
 
-  // ==================== GOOGLE REGISTER (setelah user belum terdaftar) ====================
+  // GOOGLE REGISTER (setelah user belum terdaftar)
   const handleGoogleRegisterSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -246,9 +246,9 @@ export const Login = () => {
     else { setEmailOrUser('pembeli@gmail.com'); setPassword('buyer123'); }
   };
 
-  // =====================================================================
+  // =
   // RENDER: Form pendaftaran Google (muncul saat USER_NOT_REGISTERED)
-  // =====================================================================
+  // =
   if (googlePendingToken) {
     return (
       <div className="auth-page-container">

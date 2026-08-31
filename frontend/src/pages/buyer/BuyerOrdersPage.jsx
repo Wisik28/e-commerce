@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
   useBuyerOrdersQuery, 
-  useChatCreateConversationMutation
+  useChatCreateConversationMutation,
+  useBuyerSimulateVaPaymentMutation
 } from '../../hooks/useApi';
-import { ClipboardList, MessageSquare } from 'lucide-react';
+import { ClipboardList, MessageSquare, CreditCard } from 'lucide-react';
 
 export const BuyerOrdersPage = () => {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ export const BuyerOrdersPage = () => {
   const orders = [...rawOrders].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
   const createChatMutation = useChatCreateConversationMutation();
+  const simulateVaPaymentMutation = useBuyerSimulateVaPaymentMutation(user?.id);
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
@@ -35,7 +37,20 @@ export const BuyerOrdersPage = () => {
     });
   };
 
-  // Status computation for Midtrans payments (Semua transaksi berhasil -> Lunas)
+  const handleSimulatePayment = (orderId) => {
+    if (window.confirm('Apakah Anda ingin mensimulasikan pembayaran lunas untuk pesanan ini?')) {
+      simulateVaPaymentMutation.mutate(orderId, {
+        onSuccess: () => {
+          alert('Simulasi pembayaran VA berhasil! Pesanan Anda kini berstatus Lunas.');
+        },
+        onError: (err) => {
+          alert(err?.message || 'Gagal memproses simulasi pembayaran.');
+        }
+      });
+    }
+  };
+
+  // Status computation for payments
   const getComputedStatus = (order) => {
     const rawStatus = (order?.status || '').toUpperCase();
 
@@ -44,14 +59,25 @@ export const BuyerOrdersPage = () => {
     }
 
     if (rawStatus === 'SHIPPED' || rawStatus === 'DIKIRIM') {
-      return { statusKey: 'SHIPPED', label: 'Pesanan Dikirim' };
+      return { statusKey: 'shipped', label: 'Pesanan Dikirim' };
     }
 
     if (rawStatus === 'COMPLETED' || rawStatus === 'TERKIRIM') {
-      return { statusKey: 'COMPLETED', label: 'Diterima' };
+      return { statusKey: 'terkirim', label: 'Diterima' };
     }
 
-    // Default status transaksi berhasil via Midtrans Payment Gateway -> LUNAS
+    if (rawStatus === 'PROCESSING' || rawStatus === 'DIPROSES') {
+      return { statusKey: 'processing', label: 'Diproses' };
+    }
+
+    if (rawStatus === 'PENDING_PAYMENT' || rawStatus === 'MENUNGGU') {
+      return { statusKey: 'PENDING_PAYMENT', label: 'Menunggu Pembayaran' };
+    }
+
+    if (rawStatus === 'PAID' || rawStatus === 'LUNAS') {
+      return { statusKey: 'PAID', label: 'Lunas' };
+    }
+
     return { statusKey: 'PAID', label: 'Lunas' };
   };
 
@@ -141,6 +167,23 @@ export const BuyerOrdersPage = () => {
 
                 {/* Operations */}
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                  {computed.statusKey === 'PENDING_PAYMENT' && (
+                    <button 
+                      className="btn-primary" 
+                      style={{ 
+                        padding: '0.45rem 0.75rem', 
+                        fontSize: '0.8rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}
+                      onClick={() => handleSimulatePayment(order.id)}
+                      disabled={simulateVaPaymentMutation.isPending}
+                    >
+                      <CreditCard size={14} />
+                      {simulateVaPaymentMutation.isPending ? 'Memproses...' : 'Simulasi Bayar VA'}
+                    </button>
+                  )}
                   {order.sellerId && (
                     <button 
                       className="btn-secondary" 
@@ -159,4 +202,5 @@ export const BuyerOrdersPage = () => {
     </div>
   );
 };
+
 export default BuyerOrdersPage;
